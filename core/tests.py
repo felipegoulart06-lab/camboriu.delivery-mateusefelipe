@@ -337,3 +337,34 @@ class VercelDeployTests(TestCase):
 
         original = {"ENGINE": "django.db.backends.postgresql", "HOST": "localhost", "PORT": "5432", "CONN_MAX_AGE": 600}
         self.assertEqual(serverless_database(original, {}), original)
+
+    def test_collectstatic_nao_precisa_do_postgres(self):
+        from core.deploy import comando_dispensa_banco
+
+        self.assertTrue(comando_dispensa_banco(["manage.py", "collectstatic", "--noinput"]))
+        self.assertFalse(comando_dispensa_banco(["manage.py", "runserver"]))
+        self.assertFalse(comando_dispensa_banco(["manage.py"]))
+
+    def test_build_da_vercel_consegue_coletar_estaticos_sem_banco(self):
+        import os
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        env = os.environ.copy()
+        env.update({
+            "VERCEL": "1",
+            "DEBUG": "0",
+            "DEMO_MODE": "0",
+            "SECRET_KEY": "vercel-build-test-secret-key-not-for-production",
+            "DATABASE_URL": "",
+            "DJANGO_SETTINGS_MODULE": "config.settings",
+        })
+        resultado = subprocess.run(
+            [sys.executable, "manage.py", "collectstatic", "--noinput", "-v", "0"],
+            cwd=str(Path(__file__).resolve().parent.parent),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(resultado.returncode, 0, resultado.stderr + resultado.stdout)

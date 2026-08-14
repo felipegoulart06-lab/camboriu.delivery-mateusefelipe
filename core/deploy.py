@@ -12,6 +12,11 @@ def on_vercel(env):
     return bool(env.get("VERCEL") or env.get("VERCEL_ENV"))
 
 
+def comando_dispensa_banco(argv):
+    """O collectstatic só empacota CSS/JS. Na Vercel isso roda no build, antes do runtime, sem Postgres."""
+    return (argv[1] if len(argv) > 1 else "") == "collectstatic"
+
+
 def debug_default(env):
     """Na Vercel o padrão é produção (DEBUG desligado), na máquina local é o contrário."""
     return not on_vercel(env)

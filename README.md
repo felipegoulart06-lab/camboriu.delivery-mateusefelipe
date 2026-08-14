@@ -246,7 +246,7 @@ O Django sobe como função serverless em São Paulo (`gru1`), no mesmo continen
 
 A Vercel injeta `VERCEL`, `VERCEL_URL` e `VERCEL_PROJECT_PRODUCTION_URL`. O Django acrescenta esses hosts sozinho e, na Vercel, troca a porta 5432 do pooler pela 6543 (modo transação) e desliga conexão persistente.
 
-3. Deploy. O `buildCommand` roda `collectstatic`; o WhiteNoise entrega CSS/JS de dentro da função.
+3. Deploy. O `buildCommand` roda `collectstatic` **sem precisar do banco** (o Postgres só entra em cena no request). O WhiteNoise entrega CSS/JS de dentro da função. Sem `DATABASE_URL` no runtime a aplicação não sobe — só o empacotamento dos estáticos é que dispensa o Postgres.
 4. Domínio próprio: Settings → Domains, depois some o host em `ALLOWED_HOSTS` e a origem `https://...` em `CSRF_TRUSTED_ORIGINS`.
 
 A Vercel **não guarda arquivo em disco**. Fotos do checklist, CNH e contrato social vão para o bucket privado `media` do Supabase Storage. Sem as chaves S3 o login funciona, mas o upload some no request seguinte. O download continua passando pelas views autenticadas — o bucket não é público.

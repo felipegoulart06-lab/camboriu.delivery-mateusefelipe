@@ -18,7 +18,8 @@ from urllib.parse import unquote, urlparse
 from django.core.exceptions import ImproperlyConfigured
 
 from core.deploy import (
-    debug_default, extra_hosts, extra_origins, merge_unique, on_vercel, serverless_database,
+    comando_dispensa_banco, debug_default, extra_hosts, extra_origins, merge_unique,
+    on_vercel, serverless_database,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -53,11 +54,11 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-development-only-change-me
 # SECURITY WARNING: don't run with debug turned on in production!
 ON_VERCEL = on_vercel(os.environ)
 DEBUG = flag("DEBUG", debug_default(os.environ))
-COMANDO = sys.argv[1] if len(sys.argv) > 1 else ""
+COMANDO_SEM_BANCO = comando_dispensa_banco(sys.argv)
 if (
     not DEBUG
     and SECRET_KEY == "django-insecure-development-only-change-me"
-    and COMANDO not in {"collectstatic"}
+    and not COMANDO_SEM_BANCO
 ):
     raise ImproperlyConfigured("Defina SECRET_KEY quando DEBUG=False.")
 
@@ -195,7 +196,12 @@ else:
 if ON_VERCEL:
     DATABASES["default"] = serverless_database(DATABASES["default"], os.environ)
 
-if not DEBUG and not RODANDO_TESTES and DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+if (
+    not DEBUG
+    and not RODANDO_TESTES
+    and not COMANDO_SEM_BANCO
+    and DATABASES["default"]["ENGINE"].endswith("sqlite3")
+):
     raise ImproperlyConfigured("Em produção configure DATABASE_URL (Supabase) — SQLite não aguenta a operação.")
 
 
