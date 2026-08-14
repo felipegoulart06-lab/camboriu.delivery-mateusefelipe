@@ -345,6 +345,23 @@ class VercelDeployTests(TestCase):
         self.assertFalse(comando_dispensa_banco(["manage.py", "runserver"]))
         self.assertFalse(comando_dispensa_banco(["manage.py"]))
 
+    def test_variavel_em_branco_na_vercel_usa_o_padrao(self):
+        from core.deploy import env_flag, env_float, env_int, env_value
+
+        vazio = {
+            "MIN_PASSWORD_LENGTH": "",
+            "DEBUG": "  ",
+            "MAP_DEFAULT_LAT": "",
+            "SECRET_KEY": "",
+            "LOG_LEVEL": "",
+        }
+        self.assertEqual(env_int(vazio, "MIN_PASSWORD_LENGTH", 10), 10)
+        self.assertFalse(env_flag(vazio, "DEBUG", False))
+        self.assertAlmostEqual(env_float(vazio, "MAP_DEFAULT_LAT", -26.9906), -26.9906)
+        self.assertEqual(env_value(vazio, "SECRET_KEY", "padrao"), "padrao")
+        self.assertEqual(env_value(vazio, "LOG_LEVEL", "INFO"), "INFO")
+        self.assertEqual(env_int({"MIN_PASSWORD_LENGTH": "12"}, "MIN_PASSWORD_LENGTH", 10), 12)
+
     def test_build_da_vercel_consegue_coletar_estaticos_sem_banco(self):
         import os
         import subprocess
@@ -358,6 +375,18 @@ class VercelDeployTests(TestCase):
             "DEMO_MODE": "0",
             "SECRET_KEY": "vercel-build-test-secret-key-not-for-production",
             "DATABASE_URL": "",
+            "MIN_PASSWORD_LENGTH": "",
+            "LOGIN_ATTEMPT_LIMIT": "",
+            "LOGIN_ATTEMPT_WINDOW_SECONDS": "",
+            "CHECKLIST_MAX_PHOTO_MB": "",
+            "TRACKING_PING_SECONDS": "",
+            "TRACKING_STALE_SECONDS": "",
+            "SESSION_COOKIE_AGE": "",
+            "SECURE_HSTS_SECONDS": "",
+            "MAP_DEFAULT_LAT": "",
+            "MAP_DEFAULT_LNG": "",
+            "CONN_MAX_AGE": "",
+            "LOG_LEVEL": "",
             "DJANGO_SETTINGS_MODULE": "config.settings",
         })
         resultado = subprocess.run(

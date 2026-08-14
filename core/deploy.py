@@ -17,6 +17,36 @@ def comando_dispensa_banco(argv):
     return (argv[1] if len(argv) > 1 else "") == "collectstatic"
 
 
+def env_value(env, name, default=""):
+    """Na Vercel variável definida em branco conta como ausente — o padrão do getenv não cobre isso."""
+    valor = env.get(name)
+    if valor is None:
+        return default
+    texto = str(valor).strip().strip('"').strip("'")
+    return texto if texto else default
+
+
+def env_flag(env, name, default=False):
+    valor = env.get(name)
+    if valor is None or not str(valor).strip():
+        return bool(default)
+    return str(valor).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_int(env, name, default):
+    texto = env_value(env, name, "")
+    if not texto:
+        return int(default)
+    return int(texto)
+
+
+def env_float(env, name, default):
+    texto = env_value(env, name, "")
+    if not texto:
+        return float(default)
+    return float(texto)
+
+
 def debug_default(env):
     """Na Vercel o padrão é produção (DEBUG desligado), na máquina local é o contrário."""
     return not on_vercel(env)

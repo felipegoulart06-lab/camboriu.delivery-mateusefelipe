@@ -18,8 +18,8 @@ from urllib.parse import unquote, urlparse
 from django.core.exceptions import ImproperlyConfigured
 
 from core.deploy import (
-    comando_dispensa_banco, debug_default, extra_hosts, extra_origins, merge_unique,
-    on_vercel, serverless_database,
+    comando_dispensa_banco, debug_default, env_flag, env_float, env_int, env_value,
+    extra_hosts, extra_origins, merge_unique, on_vercel, serverless_database,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -42,14 +42,14 @@ load_env_file(BASE_DIR / ".env")
 
 
 def flag(name, default=False):
-    return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+    return env_flag(os.environ, name, default)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-development-only-change-me")
+SECRET_KEY = env_value(os.environ, "SECRET_KEY", "django-insecure-development-only-change-me")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 ON_VERCEL = on_vercel(os.environ)
@@ -65,9 +65,9 @@ if (
 # Perfis de demonstração no login (e-mails e senha na tela). Só existem fora de produção.
 DEMO_MODE = flag("DEMO_MODE", DEBUG and not ON_VERCEL)
 
-ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if host.strip()]
+ALLOWED_HOSTS = [host.strip() for host in env_value(os.environ, "ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if host.strip()]
 ALLOWED_HOSTS = merge_unique(ALLOWED_HOSTS, extra_hosts(os.environ))
-CSRF_TRUSTED_ORIGINS = [url.strip() for url in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if url.strip()]
+CSRF_TRUSTED_ORIGINS = [url.strip() for url in env_value(os.environ, "CSRF_TRUSTED_ORIGINS", "").split(",") if url.strip()]
 CSRF_TRUSTED_ORIGINS = merge_unique(CSRF_TRUSTED_ORIGINS, extra_origins(os.environ))
 if DEBUG:
     for origin in ("http://127.0.0.1:8000", "http://localhost:8000"):
@@ -142,15 +142,15 @@ def postgres_config(name, user, password, host, port):
         "PASSWORD": password,
         "HOST": host,
         "PORT": str(port),
-        "CONN_MAX_AGE": 0 if transaction_pooler else int(os.getenv("CONN_MAX_AGE", "600")),
+        "CONN_MAX_AGE": 0 if transaction_pooler else env_int(os.environ, "CONN_MAX_AGE", 600),
         "CONN_HEALTH_CHECKS": not transaction_pooler,
         "DISABLE_SERVER_SIDE_CURSORS": transaction_pooler,
         "ATOMIC_REQUESTS": False,
         "OPTIONS": {
             # Supabase só aceita conexão cifrada; sem isso a credencial trafega em claro.
-            "sslmode": os.getenv("PGSSLMODE", "require"),
-            "connect_timeout": int(os.getenv("PGCONNECT_TIMEOUT", "10")),
-            "application_name": os.getenv("PGAPPNAME", "camboriu-delivery"),
+            "sslmode": env_value(os.environ, "PGSSLMODE", "require"),
+            "connect_timeout": env_int(os.environ, "PGCONNECT_TIMEOUT", 10),
+            "application_name": env_value(os.environ, "PGAPPNAME", "camboriu-delivery"),
         },
     }
 
@@ -176,20 +176,20 @@ RODANDO_TESTES = sys.argv[1:2] == ["test"] and not flag("TEST_ON_CONFIGURED_DB")
 # DATABASE_URL é o caminho usado com o Supabase; POSTGRES_* segue valendo para outro servidor.
 if RODANDO_TESTES:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.test.sqlite3"}}
-elif os.getenv("DATABASE_URL"):
+elif env_value(os.environ, "DATABASE_URL"):
     DATABASES = {"default": database_from_url(os.environ["DATABASE_URL"])}
-elif os.getenv("POSTGRES_DB"):
+elif env_value(os.environ, "POSTGRES_DB"):
     DATABASES = {"default": postgres_config(
         name=os.environ["POSTGRES_DB"],
-        user=os.getenv("POSTGRES_USER", ""),
-        password=os.getenv("POSTGRES_PASSWORD", ""),
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=os.getenv("POSTGRES_PORT", "5432"),
+        user=env_value(os.environ, "POSTGRES_USER", ""),
+        password=env_value(os.environ, "POSTGRES_PASSWORD", ""),
+        host=env_value(os.environ, "POSTGRES_HOST", "localhost"),
+        port=env_value(os.environ, "POSTGRES_PORT", "5432"),
     )}
 else:
     DATABASES = {"default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.getenv("SQLITE_PATH", BASE_DIR / "db.sqlite3"),
+        "NAME": env_value(os.environ, "SQLITE_PATH", str(BASE_DIR / "db.sqlite3")),
         "OPTIONS": {"transaction_mode": "IMMEDIATE", "init_command": "PRAGMA journal_mode=WAL;"},
     }}
 
@@ -212,7 +212,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {'min_length': int(os.getenv("MIN_PASSWORD_LENGTH", "10"))},
+        'OPTIONS': {'min_length': env_int(os.environ, "MIN_PASSWORD_LENGTH", 10)},
     },
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
@@ -242,8 +242,8 @@ if RODANDO_TESTES:
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"] + PASSWORD_HASHERS
 
 # Tentativas de login. Passou do limite, a conta espera antes de tentar de novo.
-LOGIN_ATTEMPT_LIMIT = int(os.getenv("LOGIN_ATTEMPT_LIMIT", "8"))
-LOGIN_ATTEMPT_WINDOW_SECONDS = int(os.getenv("LOGIN_ATTEMPT_WINDOW_SECONDS", "900"))
+LOGIN_ATTEMPT_LIMIT = env_int(os.environ, "LOGIN_ATTEMPT_LIMIT", 8)
+LOGIN_ATTEMPT_WINDOW_SECONDS = env_int(os.environ, "LOGIN_ATTEMPT_WINDOW_SECONDS", 900)
 
 CACHES = {"default": {
     "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -278,20 +278,20 @@ WHITENOISE_USE_FINDERS = DEBUG
 # Fotos do checklist antifraude. Em produção aponte MEDIA_ROOT para um volume com backup e acesso restrito.
 # Na Vercel o disco some a cada request: sem S3/Supabase Storage o arquivo não sobrevive.
 MEDIA_URL = '/media/'
-MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", "/tmp/camboriu-media" if ON_VERCEL else BASE_DIR / "media"))
+MEDIA_ROOT = Path(env_value(os.environ, "MEDIA_ROOT", "/tmp/camboriu-media" if ON_VERCEL else str(BASE_DIR / "media")))
 FILE_UPLOAD_PERMISSIONS = 0o640
 if ON_VERCEL:
     FILE_UPLOAD_TEMP_DIR = "/tmp"
 
-CHECKLIST_MAX_PHOTO_MB = int(os.getenv("CHECKLIST_MAX_PHOTO_MB", "12"))
-TRACKING_PING_SECONDS = int(os.getenv("TRACKING_PING_SECONDS", "15"))
-TRACKING_STALE_SECONDS = int(os.getenv("TRACKING_STALE_SECONDS", "180"))
+CHECKLIST_MAX_PHOTO_MB = env_int(os.environ, "CHECKLIST_MAX_PHOTO_MB", 12)
+TRACKING_PING_SECONDS = env_int(os.environ, "TRACKING_PING_SECONDS", 15)
+TRACKING_STALE_SECONDS = env_int(os.environ, "TRACKING_STALE_SECONDS", 180)
 
 # Leaflet é open source e o OpenStreetMap não exige token. Troque por um provedor com chave se precisar de mais volume.
-MAP_TILE_URL = os.getenv("MAP_TILE_URL", "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
-MAP_TILE_ATTRIBUTION = os.getenv("MAP_TILE_ATTRIBUTION", "© OpenStreetMap")
-MAP_DEFAULT_LAT = float(os.getenv("MAP_DEFAULT_LAT", "-26.9906"))
-MAP_DEFAULT_LNG = float(os.getenv("MAP_DEFAULT_LNG", "-48.6349"))
+MAP_TILE_URL = env_value(os.environ, "MAP_TILE_URL", "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
+MAP_TILE_ATTRIBUTION = env_value(os.environ, "MAP_TILE_ATTRIBUTION", "© OpenStreetMap")
+MAP_DEFAULT_LAT = env_float(os.environ, "MAP_DEFAULT_LAT", -26.9906)
+MAP_DEFAULT_LNG = env_float(os.environ, "MAP_DEFAULT_LNG", -48.6349)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'
@@ -305,12 +305,12 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", str(12 * 60 * 60)))
+SESSION_COOKIE_AGE = env_int(os.environ, "SESSION_COOKIE_AGE", 12 * 60 * 60)
 # Sessão lida do cache e gravada no banco: menos ida ao Postgres a cada clique.
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_SSL_REDIRECT = flag("SECURE_SSL_REDIRECT", not DEBUG)
-SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
+SECURE_HSTS_SECONDS = env_int(os.environ, "SECURE_HSTS_SECONDS", 31536000 if not DEBUG else 0)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -342,13 +342,14 @@ STORAGES = {
 }
 
 # Supabase Storage (S3). Sem essas chaves a Vercel não consegue guardar foto de checklist.
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("SUPABASE_S3_ACCESS_KEY", "")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY") or os.getenv("SUPABASE_S3_SECRET_KEY", "")
-AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "media")
-AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "sa-east-1")
-AWS_S3_ENDPOINT_URL = os.getenv(
+AWS_ACCESS_KEY_ID = env_value(os.environ, "AWS_ACCESS_KEY_ID", "") or env_value(os.environ, "SUPABASE_S3_ACCESS_KEY", "")
+AWS_SECRET_ACCESS_KEY = env_value(os.environ, "AWS_SECRET_ACCESS_KEY", "") or env_value(os.environ, "SUPABASE_S3_SECRET_KEY", "")
+AWS_STORAGE_BUCKET_NAME = env_value(os.environ, "AWS_STORAGE_BUCKET_NAME", "media")
+AWS_S3_REGION_NAME = env_value(os.environ, "AWS_S3_REGION_NAME", "sa-east-1")
+AWS_S3_ENDPOINT_URL = env_value(
+    os.environ,
     "AWS_S3_ENDPOINT_URL",
-    f"https://{os.getenv('SUPABASE_PROJECT_REF', 'qnfhfgqnvhhhkiobxpff')}.storage.supabase.co/storage/v1/s3",
+    f"https://{env_value(os.environ, 'SUPABASE_PROJECT_REF', 'qnfhfgqnvhhhkiobxpff')}.storage.supabase.co/storage/v1/s3",
 )
 AWS_S3_SIGNATURE_VERSION = "s3v4"
 AWS_S3_ADDRESSING_STYLE = "path"
@@ -359,7 +360,7 @@ AWS_S3_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
     STORAGES["default"] = {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"}
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_LEVEL = env_value(os.environ, "LOG_LEVEL", "INFO").upper()
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
