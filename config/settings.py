@@ -293,7 +293,7 @@ if ON_VERCEL:
         str(BASE_DIR),
     )
 
-CHECKLIST_MAX_PHOTO_MB = env_int(os.environ, "CHECKLIST_MAX_PHOTO_MB", 12)
+CHECKLIST_MAX_PHOTO_MB = env_int(os.environ, "CHECKLIST_MAX_PHOTO_MB", 1 if ON_VERCEL else 12)
 TRACKING_PING_SECONDS = env_int(os.environ, "TRACKING_PING_SECONDS", 15)
 TRACKING_STALE_SECONDS = env_int(os.environ, "TRACKING_STALE_SECONDS", 180)
 

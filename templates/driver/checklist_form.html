@@ -5,7 +5,7 @@
 <a class="back" href="{% url 'driver_job_detail' delivery.pk %}">← Corrida {{ delivery.code }}</a>
 <h1>Checklist antifraude</h1>
 <p class="sub">{{ delivery.company.name }} · {{ delivery.get_item_type_display }}</p>
-<p class="warn-note">As 12 fotos são obrigatórias. Elas ficam anexadas ao termo de coleta e protegem você e a empresa.</p>
+<p class="warn-note">As 12 fotos são obrigatórias. O celular comprime cada uma antes de enviar, para caber no servidor. Elas ficam no termo de coleta e protegem você e a empresa.</p>
 
 <form method="post" enctype="multipart/form-data" novalidate id="checklist-form">{% csrf_token %}
   {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
