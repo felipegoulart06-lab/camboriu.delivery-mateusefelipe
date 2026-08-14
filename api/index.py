@@ -1,4 +1,2 @@
-"""Compatibilidade: a Vercel resolve o Django por config/wsgi.py (WSGI_APPLICATION)."""
-from config.wsgi import application
-
-app = application
+"""A Vercel resolve o Django por WSGI_APPLICATION; este arquivo só reexporta."""
+from config.wsgi import app, application  # noqa: F401

@@ -6,6 +6,7 @@ from urllib.parse import urlsplit, urlunsplit
 VERCEL_PREVIEW_HOST = ".vercel.app"
 VERCEL_PREVIEW_ORIGIN = "https://*.vercel.app"
 SUPABASE_TRANSACTION_PORT = "6543"
+CHAVE_DESENVOLVIMENTO = "django-insecure-development-only-change-me"
 
 
 def on_vercel(env):
@@ -129,3 +130,15 @@ def database_url_for_vercel(url, env):
         netloc = partes.netloc.replace(":5432", f":{SUPABASE_TRANSACTION_PORT}")
         return urlunsplit((partes.scheme, netloc, partes.path, partes.query, partes.fragment))
     return url
+
+
+def falhas_de_deploy(*, debug, testes, inspecao, chave, sqlite):
+    """O que impede a operação de subir. No build isso fica vazio; no ar vira a página 503."""
+    if debug or testes or inspecao:
+        return []
+    falhas = []
+    if not chave or chave == CHAVE_DESENVOLVIMENTO:
+        falhas.append("SECRET_KEY")
+    if sqlite:
+        falhas.append("DATABASE_URL")
+    return falhas

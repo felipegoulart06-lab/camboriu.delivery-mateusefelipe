@@ -352,6 +352,29 @@ class VercelDeployTests(TestCase):
         self.assertTrue(inspecao_de_build({}, ["manage.py", "collectstatic", "--noinput"]))
         self.assertFalse(inspecao_de_build({"VERCEL": "1", "VERCEL_ENV": "production"}, ["config/wsgi.py"]))
 
+    def test_falhas_de_deploy_so_aparecem_no_runtime(self):
+        from core.deploy import CHAVE_DESENVOLVIMENTO, falhas_de_deploy
+
+        self.assertEqual(
+            falhas_de_deploy(debug=False, testes=False, inspecao=False, chave=CHAVE_DESENVOLVIMENTO, sqlite=True),
+            ["SECRET_KEY", "DATABASE_URL"],
+        )
+        self.assertEqual(
+            falhas_de_deploy(debug=False, testes=False, inspecao=True, chave=CHAVE_DESENVOLVIMENTO, sqlite=True),
+            [],
+        )
+        self.assertEqual(
+            falhas_de_deploy(debug=False, testes=False, inspecao=False, chave="chave-real-longa", sqlite=False),
+            [],
+        )
+
+    def test_deploy_incompleto_responde_503_em_vez_de_derrubar_a_funcao(self):
+        with override_settings(FALHAS_DE_DEPLOY=["SECRET_KEY", "DATABASE_URL"]):
+            resposta = self.client.get("/")
+        self.assertEqual(resposta.status_code, 503)
+        self.assertContains(resposta, "SECRET_KEY", status_code=503)
+        self.assertContains(resposta, "DATABASE_URL", status_code=503)
+
     def test_inspecao_do_manage_py_na_vercel_nao_exige_secret_key(self):
         import os
         import subprocess

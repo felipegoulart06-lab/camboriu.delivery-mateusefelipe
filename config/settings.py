@@ -18,8 +18,9 @@ from urllib.parse import unquote, urlparse
 from django.core.exceptions import ImproperlyConfigured
 
 from core.deploy import (
-    debug_default, env_flag, env_float, env_int, env_value, extra_hosts,
-    extra_origins, inspecao_de_build, merge_unique, on_vercel, serverless_database,
+    CHAVE_DESENVOLVIMENTO, debug_default, env_flag, env_float, env_int, env_value,
+    extra_hosts, extra_origins, falhas_de_deploy, inspecao_de_build, merge_unique,
+    on_vercel, serverless_database,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -49,18 +50,13 @@ def flag(name, default=False):
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env_value(os.environ, "SECRET_KEY", "django-insecure-development-only-change-me")
+SECRET_KEY = env_value(os.environ, "SECRET_KEY", CHAVE_DESENVOLVIMENTO)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 ON_VERCEL = on_vercel(os.environ)
 DEBUG = flag("DEBUG", debug_default(os.environ))
 COMANDO_SEM_BANCO = inspecao_de_build(os.environ, sys.argv)
-if (
-    not DEBUG
-    and SECRET_KEY == "django-insecure-development-only-change-me"
-    and not COMANDO_SEM_BANCO
-):
-    raise ImproperlyConfigured("Defina SECRET_KEY quando DEBUG=False.")
+FALHAS_DE_DEPLOY = []
 
 # Perfis de demonstração no login (e-mails e senha na tela). Só existem fora de produção.
 DEMO_MODE = flag("DEMO_MODE", DEBUG and not ON_VERCEL)
@@ -92,6 +88,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'core.deploy_guard.DeployGuardMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -177,7 +174,14 @@ RODANDO_TESTES = sys.argv[1:2] == ["test"] and not flag("TEST_ON_CONFIGURED_DB")
 if RODANDO_TESTES:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.test.sqlite3"}}
 elif env_value(os.environ, "DATABASE_URL"):
-    DATABASES = {"default": database_from_url(os.environ["DATABASE_URL"])}
+    try:
+        DATABASES = {"default": database_from_url(os.environ["DATABASE_URL"])}
+    except ImproperlyConfigured:
+        FALHAS_DE_DEPLOY.append("DATABASE_URL")
+        DATABASES = {"default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": "/tmp/camboriu-deploy.sqlite3" if ON_VERCEL else str(BASE_DIR / "db.sqlite3"),
+        }}
 elif env_value(os.environ, "POSTGRES_DB"):
     DATABASES = {"default": postgres_config(
         name=os.environ["POSTGRES_DB"],
@@ -196,13 +200,16 @@ else:
 if ON_VERCEL:
     DATABASES["default"] = serverless_database(DATABASES["default"], os.environ)
 
-if (
-    not DEBUG
-    and not RODANDO_TESTES
-    and not COMANDO_SEM_BANCO
-    and DATABASES["default"]["ENGINE"].endswith("sqlite3")
-):
-    raise ImproperlyConfigured("Em produção configure DATABASE_URL (Supabase) — SQLite não aguenta a operação.")
+FALHAS_DE_DEPLOY = list(dict.fromkeys(FALHAS_DE_DEPLOY + falhas_de_deploy(
+    debug=DEBUG,
+    testes=RODANDO_TESTES,
+    inspecao=COMANDO_SEM_BANCO,
+    chave=SECRET_KEY,
+    sqlite=DATABASES["default"]["ENGINE"].endswith("sqlite3"),
+)))
+if "SECRET_KEY" in FALHAS_DE_DEPLOY:
+    # Django precisa de alguma chave só para o processo subir e mostrar o 503.
+    SECRET_KEY = env_value(os.environ, "VERCEL_GIT_COMMIT_SHA", CHAVE_DESENVOLVIMENTO) or CHAVE_DESENVOLVIMENTO
 
 
 # Password validation
@@ -337,9 +344,13 @@ STORAGES = {
     # sem risco de servir CSS velho. Exige rodar collectstatic no deploy.
     "staticfiles": {
         "BACKEND": (
-            "whitenoise.storage.CompressedManifestStaticFilesStorage"
-            if flag("STATIC_MANIFEST", not DEBUG)
-            else "whitenoise.storage.CompressedStaticFilesStorage"
+            "whitenoise.storage.CompressedStaticFilesStorage"
+            if ON_VERCEL
+            else (
+                "whitenoise.storage.CompressedManifestStaticFilesStorage"
+                if flag("STATIC_MANIFEST", not DEBUG)
+                else "whitenoise.storage.CompressedStaticFilesStorage"
+            )
         ),
     },
 }
