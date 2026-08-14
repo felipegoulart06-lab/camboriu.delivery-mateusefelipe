@@ -1,0 +1,62 @@
+{% extends "platform/base.html" %}
+{% block title %}Integrações{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">PROCEDIMENTO OPERACIONAL</p>
+    <h1>Integrações</h1>
+    <p>{{ subtitle }}</p>
+  </div>
+  <div class="head-actions">
+    <a class="button" href="{% url 'platform_integration_pdf' %}">Baixar PDF para empresas e entregadores</a>
+  </div>
+</div>
+
+<div class="message">Este é o documento oficial de como a corrida deve ser feita. Envie o PDF na integração da empresa e na do entregador — o texto da tela e o do arquivo são o mesmo.</div>
+
+<section class="card manual-cover">
+  <p class="eyebrow">{{ audience }}</p>
+  <h2>{{ title }}</h2>
+  <p>Versão {{ version }}. Use o índice abaixo para apresentar na reunião ou imprima o PDF completo.</p>
+  <ol class="manual-toc">
+    {% for section in sections %}
+      <li><a href="#{{ section.id }}">{{ section.title }}</a></li>
+    {% endfor %}
+  </ol>
+</section>
+
+{% for section in sections %}
+<section class="card manual-section" id="{{ section.id }}">
+  <h2>{{ section.title }}</h2>
+  {% for block in section.blocks %}
+    {% if block.type == "p" %}
+      <p>{{ block.text }}</p>
+    {% elif block.type == "steps" %}
+      <ol class="manual-steps">
+        {% for item in block.items %}<li>{{ item }}</li>{% endfor %}
+      </ol>
+    {% elif block.type == "rules" %}
+      <ul class="manual-rules">
+        {% for item in block.items %}<li>{{ item }}</li>{% endfor %}
+      </ul>
+    {% elif block.type == "roles" %}
+      <dl class="manual-roles">
+        {% for title, text in block.items %}
+          <div><dt>{{ title }}</dt><dd>{{ text }}</dd></div>
+        {% endfor %}
+      </dl>
+    {% elif block.type == "photos" %}
+      <ol class="manual-photos">
+        {% for number, title, how in block.items %}
+          <li><strong>{{ number }} · {{ title }}</strong><span>{{ how }}</span></li>
+        {% endfor %}
+      </ol>
+    {% endif %}
+  {% endfor %}
+</section>
+{% endfor %}
+
+<div class="actions">
+  <a class="button" href="{% url 'platform_integration_pdf' %}">Baixar PDF para apresentar</a>
+</div>
+{% endblock %}

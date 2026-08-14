@@ -1,0 +1,72 @@
+{% extends "platform/base.html" %}
+{% block title %}Central de despacho{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">CAMBORIÚ DELIVERY · CENTRAL DE DESPACHO</p><h1>Solicitações das empresas</h1><p>Toda solicitação entra aqui. Acione um entregador e confirme o aceite.</p></div>
+  <a class="button secondary" href="{% url 'platform_drivers' %}">Entregadores</a>
+</div>
+<section class="kpis">
+  <article class="{% if incoming %}danger{% endif %}"><small>Novas solicitações</small><strong>{{ incoming|length }}</strong><span>aguardando acionamento</span></article>
+  <article><small>Aguardando aceite</small><strong>{{ waiting_driver|length }}</strong><span>entregador acionado</span></article>
+  <article><small>Em execução</small><strong>{{ running|length }}</strong><span>com rastreio ativo</span></article>
+  <article><small>Entregues hoje</small><strong>{{ closed_today }}</strong><span>concluídas</span></article>
+</section>
+
+<section class="card"><h2>Novas solicitações</h2>
+  <div class="table-wrap"><table><thead><tr><th>Código</th><th>Empresa</th><th>Item</th><th>Prioridade</th><th>Coleta</th><th></th></tr></thead><tbody>
+  {% for item in incoming %}
+    <tr>
+      <td><a href="{% url 'dispatch_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+      <td>{{ item.company.name }}</td>
+      <td>{{ item.get_item_type_display }}</td>
+      <td>{{ item.get_priority_display }}</td>
+      <td>{{ item.pickup_address|truncatechars:34 }}</td>
+      <td><a class="button" href="{% url 'dispatch_delivery' item.pk %}">Acionar entregador</a></td>
+    </tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nenhuma solicitação aberta.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section class="card"><h2>Aguardando aceite do entregador</h2>
+  <div class="table-wrap"><table><thead><tr><th>Código</th><th>Empresa</th><th>Entregador</th><th>Acionada em</th><th></th></tr></thead><tbody>
+  {% for item in waiting_driver %}
+    <tr>
+      <td><a href="{% url 'dispatch_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+      <td>{{ item.company.name }}</td>
+      <td>{{ item.driver.name }}</td>
+      <td>{{ item.dispatched_at|date:"d/m H:i" }}</td>
+      <td>{% if item.driver.whatsapp_url %}<a class="button secondary" href="{{ item.driver.whatsapp_url }}" target="_blank" rel="noopener">Chamar no WhatsApp</a>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="empty">Ninguém aguardando aceite.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section class="card"><h2>Em execução</h2>
+  <div class="table-wrap"><table><thead><tr><th>Código</th><th>Empresa</th><th>Entregador</th><th>Status</th><th>Checklist</th><th>Última posição</th></tr></thead><tbody>
+  {% for item in running %}
+    <tr>
+      <td><a href="{% url 'dispatch_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+      <td>{{ item.company.name }}</td>
+      <td>{{ item.driver.name }}</td>
+      <td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td>
+      <td>{% if item.has_pickup_checklist %}enviado{% else %}pendente{% endif %}</td>
+      <td>{{ item.driver.last_position_at|date:"d/m H:i"|default:"sem sinal" }}</td>
+    </tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nada em rota.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section class="card"><h2>Entregadores com acesso ao app</h2>
+  <div class="table-wrap"><table><thead><tr><th>Entregador</th><th>Telefone</th><th>Vínculo</th><th>Última posição</th><th></th></tr></thead><tbody>
+  {% for driver in available_drivers %}
+    <tr>
+      <td>{{ driver.name }}</td>
+      <td>{{ driver.phone }}</td>
+      <td>{{ driver.get_contract_type_display }}</td>
+      <td>{{ driver.last_position_at|date:"d/m H:i"|default:"—" }}</td>
+      <td>{% if driver.whatsapp_url %}<a href="{{ driver.whatsapp_url }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="empty">Cadastre entregadores com login para acionar corridas.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

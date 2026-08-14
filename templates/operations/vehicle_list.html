@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Veículos{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">FROTA</p>
+    <h1>Veículos</h1>
+    <p>{% if read_only_fleet %}Veículos da Camboriú Delivery disponíveis para suas entregas.{% else %}Disponibilidade e capacidade operacional.{% endif %}</p>
+  </div>
+  {% if user.can_manage_resources and not read_only_fleet %}<a class="button" href="{% url 'vehicle_create' %}">+ Novo veículo</a>{% endif %}
+</div>
+<section class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Placa</th><th>Veículo</th><th>Tipo</th><th>Capacidade</th><th>Documentos</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for item in vehicles %}
+    <tr>
+      <td><strong>{{ item.plate }}</strong>{% if item.plate_state %}<br><small>{{ item.plate_state }}</small>{% endif %}</td>
+      <td>{{ item.brand }} {{ item.model }} · {{ item.year }}{% if item.color %}<br><small>{{ item.color }}{% if item.fuel %} · {{ item.get_fuel_display }}{% endif %}</small>{% endif %}</td>
+      <td>{{ item.get_kind_display }}{% if item.body_type %}<br><small>{{ item.get_body_type_display }}</small>{% endif %}</td>
+      <td>{{ item.capacity_kg|default:"—" }} kg{% if item.cargo_volume_liters %}<br><small>{{ item.cargo_volume_liters }} L</small>{% elif item.top_case_liters %}<br><small>baú {{ item.top_case_liters }} L</small>{% endif %}</td>
+      <td>
+        {% if item.missing_documents %}<small class="field-error">falta: {{ item.missing_documents|join:", " }}</small>{% else %}<span class="badge delivered">completos</span>{% endif %}
+        {% for label, value, expired in item.expiring %}<br><small class="{% if expired %}field-error{% endif %}">{{ label }} {% if expired %}venceu{% else %}vence{% endif %} em {{ value|date:"d/m/Y" }}</small>{% endfor %}
+      </td>
+      <td><span class="badge">{{ item.get_status_display }}</span></td>
+      <td>{% if user.can_manage_resources and not read_only_fleet %}<a href="{% url 'vehicle_edit' item.pk %}">Editar</a>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="empty">Nenhum veículo cadastrado.</td></tr>{% endfor %}
+  </tbody>
+</table></div></section>
+{% endblock %}

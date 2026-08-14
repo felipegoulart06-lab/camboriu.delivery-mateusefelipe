@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Faturar entregas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">FATURAMENTO EM BOLETO</p><h1>Faturar entregas</h1>
+    <p>Escolha as entregas e a data de vencimento. A Camboriú Delivery emite o boleto e ele aparece aqui no painel.</p>
+  </div>
+  <a class="button secondary" href="{% url 'company_billing' %}">Cancelar</a>
+</div>
+<form class="card form-card" method="post" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-grid">
+    <div>
+      <label for="{{ form.due_date.id_for_label }}">{{ form.due_date.label }} *</label>{{ form.due_date }}
+      {% for error in form.due_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      {% if form.due_date.help_text %}<small>{{ form.due_date.help_text }}</small>{% endif %}
+    </div>
+    <div>
+      <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>{{ form.notes }}
+    </div>
+  </div>
+
+  <h2>Entregas</h2>
+  {% for error in form.deliveries.errors %}<div class="message error">{{ error }}</div>{% endfor %}
+  <div class="checkbox-list">
+    {% for choice in form.deliveries %}
+    <label class="pick">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
+    {% endfor %}
+  </div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Código</th><th>Entregue em</th><th>Destinos</th><th>Valor</th></tr></thead>
+    <tbody>
+    {% for item in available %}
+      <tr><td><strong>{{ item.code }}</strong></td><td>{{ item.delivered_at|date:"d/m/Y" }}</td><td>{{ item.destination_count }}</td><td>R$ {{ item.price }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+
+  <div class="actions"><button class="button" type="submit">Gerar fatura e pedir o boleto</button></div>
+</form>
+{% endblock %}

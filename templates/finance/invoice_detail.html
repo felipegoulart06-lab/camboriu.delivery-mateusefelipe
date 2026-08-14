@@ -1,0 +1,87 @@
+{% extends "platform/base.html" %}
+{% block title %}{{ invoice.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">FATURA</p><h1>{{ invoice.number }}</h1>
+    <p>{{ invoice.company.billing_name }} · {{ invoice.company.document_label }}
+      <span class="badge {{ invoice.status }}">{{ invoice.get_status_display }}</span>
+      {% if invoice.is_overdue %}<span class="badge canceled">{{ invoice.days_late }} dia(s) em atraso</span>{% endif %}</p>
+  </div>
+  <div class="head-actions">
+    <a class="button secondary" href="{% url 'invoice_document' invoice.pk %}">Baixar PDF</a>
+    {% if user.can_manage_companies and invoice.is_receivable %}<a class="button" href="{% url 'invoice_bank_slip' invoice.pk %}">{% if invoice.bank_slip_line %}Editar boleto{% else %}Registrar boleto{% endif %}</a>{% endif %}
+    <a class="button secondary" href="{% url 'invoice_list' %}">Voltar</a>
+  </div>
+</div>
+
+<section class="kpis">
+  <article><small>Total</small><strong>R$ {{ invoice.total }}</strong><span>{{ deliveries|length }} entrega(s)</span></article>
+  <article><small>Vencimento</small><strong>{{ invoice.due_date|date:"d/m/Y" }}</strong><span>{{ invoice.get_kind_display }}</span></article>
+  <article><small>Criada em</small><strong>{{ invoice.created_at|date:"d/m/y" }}</strong><span>{{ invoice.requested_by.get_full_name|default:"administração" }}</span></article>
+  <article><small>Pagamento</small><strong>{% if invoice.paid_at %}{{ invoice.paid_at|date:"d/m/y" }}{% else %}—{% endif %}</strong><span>{{ invoice.payment_method|default:"em aberto" }}</span></article>
+</section>
+
+<div class="detail-grid">
+  <section class="card detail">
+    <h2>Cobrança</h2>
+    <dl>
+      <div><dt>Empresa</dt><dd>{{ invoice.company.billing_name }}</dd></div>
+      <div><dt>Documento</dt><dd>{{ invoice.company.document_label }}</dd></div>
+      <div><dt>Endereço</dt><dd>{{ invoice.company.full_address|default:"—" }}</dd></div>
+      <div><dt>Contato</dt><dd>{{ invoice.company.phone|default:invoice.company.email|default:"—" }}</dd></div>
+    </dl>
+    <h3>Boleto</h3>
+    {% if invoice.bank_slip_line %}
+      <p class="slip-line">{{ invoice.bank_slip_line }}</p>
+      {% if invoice.bank_slip_url %}<p><a href="{{ invoice.bank_slip_url }}" target="_blank" rel="noopener">Abrir boleto no banco</a></p>{% endif %}
+    {% elif invoice.kind == 'boleto' %}
+      <p>Boleto ainda não emitido. Gere no internet banking e cole a linha digitável aqui — a empresa passa a ver na hora.</p>
+    {% else %}
+      <p>Cobrança por Pix ou dinheiro, sem boleto.</p>
+    {% endif %}
+    {% if invoice.notes %}<h3>Observações</h3><p>{{ invoice.notes|linebreaksbr }}</p>{% endif %}
+  </section>
+
+  <section class="card detail">
+    <h2>Baixa e cancelamento</h2>
+    {% if user.can_manage_companies and invoice.is_receivable %}
+      <form method="post" action="{% url 'invoice_pay' invoice.pk %}">{% csrf_token %}
+        <div class="form-grid">
+          {% for field in payment_form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+        </div>
+        <div class="actions"><button class="button" type="submit">Marcar como paga</button></div>
+      </form>
+      <form class="cancel-form" method="post" action="{% url 'invoice_cancel' invoice.pk %}"
+            data-confirm="Cancelar a fatura {{ invoice.number }}? As entregas voltam para a fila de faturamento. Esta ação pede confirmação porque não tem como desfazer o boleto já emitido no banco."
+            data-confirm-ok="Sim, cancelar a fatura">{% csrf_token %}
+        <button class="button secondary" type="submit">Cancelar fatura</button>
+        <small>As entregas voltam para a fila de faturamento. A fatura permanece no histórico como cancelada.</small>
+      </form>
+    {% elif invoice.status == 'paid' %}
+      <p>Fatura paga em {{ invoice.paid_at|date:"d/m/Y H:i" }} via {{ invoice.payment_method|default:"forma não informada" }}.</p>
+    {% else %}
+      <p>Fatura cancelada.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Entregas faturadas</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Código</th><th>Entregue em</th><th>Destinos</th><th>Entregador</th><th>Valor</th><th></th></tr></thead>
+    <tbody>
+    {% for item in deliveries %}
+      <tr>
+        <td><a href="{% url 'dispatch_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+        <td>{{ item.delivered_at|date:"d/m/Y H:i"|default:"—" }}</td>
+        <td>{{ item.destination_count }}</td>
+        <td>{{ item.driver.name|default:"—" }}</td>
+        <td>R$ {{ item.price }}</td>
+        <td><a href="{% url 'delivery_document' item.pk %}">PDF da solicitação</a></td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nenhuma entrega nesta fatura.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

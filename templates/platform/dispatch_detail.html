@@ -1,0 +1,84 @@
+{% extends "platform/base.html" %}
+{% block title %}Despacho {{ delivery.code }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">DESPACHO</p><h1>{{ delivery.code }}</h1><p>{{ delivery.company.name }} · <span class="badge {{ delivery.status }}">{{ delivery.get_status_display }}</span></p></div>
+  <div class="head-actions">
+    {% if delivery.status == 'requested' or delivery.status == 'dispatching' %}<a class="button" href="{% url 'dispatch_delivery' delivery.pk %}">{% if delivery.driver %}Trocar entregador{% else %}Acionar entregador{% endif %}</a>{% endif %}
+    {% if delivery.has_pickup_checklist %}<a class="button secondary" href="{% url 'delivery_checklist' delivery.pk %}">Termo de coleta</a>{% endif %}
+    <a class="button secondary" href="{% url 'delivery_document' delivery.pk %}">PDF da solicitação</a>
+    {% if not delivery.invoice_id %}<a class="button secondary" href="{% url 'delivery_price' delivery.pk %}">Ajustar valores</a>{% endif %}
+    <a class="button secondary" href="{% url 'dispatch_board' %}">Central</a>
+  </div>
+</div>
+<div class="detail-grid">
+  <section class="card detail">
+    <h2>Entregador</h2>
+    {% if delivery.driver %}
+      <dl>
+        <div><dt>Nome</dt><dd>{{ delivery.driver.name }}</dd></div>
+        <div><dt>Telefone</dt><dd>{{ delivery.driver.phone }}</dd></div>
+        <div><dt>Veículo</dt><dd>{{ delivery.vehicle|default:"—" }}</dd></div>
+        <div><dt>Login no app</dt><dd>{{ delivery.driver.user.username|default:"sem acesso" }}</dd></div>
+        <div><dt>Última posição</dt><dd>{{ delivery.driver.last_position_at|date:"d/m/Y H:i"|default:"sem sinal" }}</dd></div>
+        <div><dt>Checklist</dt><dd>{% if delivery.has_pickup_checklist %}enviado com {{ delivery.pickup_checklist.photos.count }} fotos{% else %}pendente{% endif %}</dd></div>
+      </dl>
+      <div class="actions">
+        {% if delivery.driver.whatsapp_url %}<a class="button" href="{{ delivery.driver.whatsapp_url }}" target="_blank" rel="noopener">Falar no WhatsApp agora</a>{% endif %}
+        {% if delivery.status == 'dispatching' %}
+        <form method="post" action="{% url 'dispatch_confirm' delivery.pk %}">{% csrf_token %}<button class="button secondary" type="submit">Confirmar aceite por telefone</button></form>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="empty">Nenhum entregador acionado ainda.</p>
+    {% endif %}
+    {% if delivery.status != 'delivered' and delivery.status != 'canceled' %}
+    <form class="cancel-form" method="post" action="{% url 'dispatch_cancel' delivery.pk %}"
+          data-confirm="A solicitação {{ delivery.code }} não será apagada. O histórico permanece e o status passa a Cancelada. Confirma o cancelamento da corrida?"
+          data-confirm-ok="Sim, cancelar a corrida">{% csrf_token %}
+      <label for="reason">Cancelar a corrida</label>
+      <input id="reason" name="reason" maxlength="180" placeholder="Motivo do cancelamento">
+      <button class="button secondary" type="submit">Cancelar entrega</button>
+      <small>A solicitação da empresa não pode ser excluída. Só o status muda; o PDF e o histórico continuam no sistema.</small>
+    </form>
+    {% endif %}
+  </section>
+  <section class="card detail">
+    <h2>Solicitação</h2>
+    <h3>Coleta</h3><p>{{ delivery.pickup_address }}<br><small>{{ delivery.pickup_contact }}</small></p>
+    <h3>Destinos ({{ delivery.destination_count }})</h3>
+    <ol class="stops">
+      {% for stop in delivery.destinations %}
+      <li>{{ stop.address }}<br><small>{{ stop.contact|default:"sem contato" }}{% if stop.notes %} · {{ stop.notes }}{% endif %}</small></li>
+      {% endfor %}
+    </ol>
+    <dl>
+      <div><dt>Item</dt><dd>{{ delivery.get_item_type_display }}</dd></div>
+      <div><dt>Prioridade</dt><dd>{{ delivery.get_priority_display }}</dd></div>
+      <div><dt>Valor declarado</dt><dd>R$ {{ delivery.declared_value }}</dd></div>
+      <div><dt>Prazo</dt><dd>{{ delivery.deadline|date:"d/m H:i"|default:"—" }}</dd></div>
+    </dl>
+    <h3>Descrição</h3><p>{{ delivery.description }}</p>
+  </section>
+  <section class="card detail">
+    <h2>Empresa solicitante</h2>
+    <dl>
+      <div><dt>Razão social</dt><dd>{{ delivery.company.billing_name }}</dd></div>
+      <div><dt>Documento</dt><dd>{{ delivery.company.document_label }}</dd></div>
+      <div><dt>Endereço</dt><dd>{{ delivery.company.full_address|default:"—" }}</dd></div>
+      <div><dt>Responsável</dt><dd>{{ delivery.company.contact_name|default:"—" }}</dd></div>
+      <div><dt>Contato</dt><dd>{{ delivery.company.phone|default:"—" }}{% if delivery.company.email %} · {{ delivery.company.email }}{% endif %}</dd></div>
+      <div><dt>Faturamento</dt><dd>{% if delivery.company.can_invoice %}boleto, vencimento dia {{ delivery.company.invoice_due_day }}{% else %}Pix ou dinheiro por entrega{% endif %}</dd></div>
+    </dl>
+    <h3>Valores</h3>
+    <dl>
+      <div><dt>Cobrado da empresa</dt><dd>R$ {{ delivery.price }}</dd></div>
+      <div><dt>Repasse ao entregador</dt><dd>R$ {{ delivery.driver_payout_amount }}</dd></div>
+      <div><dt>Margem</dt><dd>R$ {{ delivery.platform_margin }}</dd></div>
+      <div><dt>Fatura</dt><dd>{% if delivery.invoice %}<a href="{% url 'invoice_detail' delivery.invoice.pk %}">{{ delivery.invoice.number }}</a>{% else %}não faturada{% endif %}</dd></div>
+      <div><dt>Repasse</dt><dd>{% if delivery.payout %}<a href="{% url 'payout_detail' delivery.payout.pk %}">{{ delivery.payout.get_status_display }}</a>{% else %}em aberto{% endif %}</dd></div>
+    </dl>
+  </section>
+</div>
+<section class="card timeline"><h2>Histórico</h2>{% for event in delivery.events.all %}<div class="event"><i></i><div><strong>{{ event.description }}</strong><p>{{ event.get_status_display }} · {{ event.created_at|date:"d/m/Y H:i" }} · {{ event.created_by|default:"Sistema" }}</p></div></div>{% empty %}<p class="empty">Sem eventos.</p>{% endfor %}</section>
+{% endblock %}

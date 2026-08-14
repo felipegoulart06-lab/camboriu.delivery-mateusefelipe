@@ -1,0 +1,82 @@
+{% extends "platform/base.html" %}
+{% block title %}Visão geral{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">CAMBORIÚ DELIVERY · ADMINISTRAÇÃO</p><h1>Olá, {{ user.first_name|default:user.username }}.</h1><p>Situação da operação e das empresas atendidas hoje.</p></div>
+  <div class="head-actions">
+    {% if user.can_manage_companies %}<a class="button" href="{% url 'company_create' %}">+ Cadastrar empresa</a>{% endif %}
+    <a class="button secondary" href="{% url 'finance_dashboard' %}">Financeiro</a>
+    <a class="button secondary" href="{% url 'dispatch_board' %}">Ir para o despacho</a>
+  </div>
+</div>
+
+{% if unread %}
+<div class="message"><strong>{{ unread }}</strong> notificação(ões) sem ler. <a href="{% url 'notification_list' %}">Abrir a central de avisos</a>.</div>
+{% endif %}
+{% if pending_registration %}
+<div class="message">{{ pending_registration }} empresa(s) ainda não concluíram o cadastro e não conseguem pedir retirada. <a href="{% url 'company_list' %}">Ver empresas</a>.</div>
+{% endif %}
+
+<section class="kpis">
+  <article class="{% if incoming %}danger{% endif %}"><small>Novas solicitações</small><strong>{{ incoming }}</strong><span>aguardando acionamento</span></article>
+  <article><small>Aguardando aceite</small><strong>{{ waiting_driver }}</strong><span>entregador acionado</span></article>
+  <article><small>Em rota agora</small><strong>{{ running }}</strong><span>com rastreio ativo</span></article>
+  <article><small>Entregues hoje</small><strong>{{ delivered_today }}</strong><span>de {{ created_today }} criadas hoje</span></article>
+</section>
+
+<section class="kpis">
+  <article><small>Recebido no mês</small><strong>R$ {{ finance.received_month }}</strong><span>R$ {{ finance.receivable_total }} a receber</span></article>
+  <article><small>Repassado aos entregadores</small><strong>R$ {{ finance.payout_paid_total }}</strong><span>R$ {{ finance.payout_pending_total }} a repassar</span></article>
+  <article><small>Margem do mês</small><strong>R$ {{ finance.margin_month }}</strong><span>de R$ {{ finance.revenue_month }} faturáveis</span></article>
+  <article class="{% if finance.overdue_count %}danger{% endif %}"><small>Faturas vencidas</small><strong>{{ finance.overdue_count }}</strong><span>R$ {{ finance.overdue_total }} em atraso</span></article>
+</section>
+
+<div class="split">
+  <section class="card"><div class="card-head"><h2>Últimas solicitações</h2><a href="{% url 'platform_deliveries' %}">Ver todas</a></div>
+    <div class="table-wrap"><table><thead><tr><th>Código</th><th>Empresa</th><th>Status</th><th>Entregador</th><th></th></tr></thead><tbody>
+    {% for item in latest %}
+      <tr>
+        <td><a href="{% url 'dispatch_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+        <td>{{ item.company.name }}</td>
+        <td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td>
+        <td>{{ item.driver.name|default:"—" }}</td>
+        <td>{% if item.status == 'requested' %}<a href="{% url 'dispatch_delivery' item.pk %}">Acionar</a>{% endif %}</td>
+      </tr>
+    {% empty %}<tr><td colspan="5" class="empty">Nenhuma solicitação ainda.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+  <aside class="card resources">
+    <h2>Cadastros</h2>
+    <div><strong>{{ companies_active }}</strong><span>empresas ativas de {{ companies_total }}</span></div>
+    <div><strong>{{ drivers_active }}</strong><span>entregadores ativos</span></div>
+    <div><strong>{{ drivers_with_login }}</strong><span>com login no app</span></div>
+    <div><strong>{{ checklists_today }}</strong><span>checklists enviados hoje</span></div>
+    <div><strong>{{ critical }}</strong><span>prioridade crítica em aberto</span></div>
+  </aside>
+</div>
+
+<section class="card"><h2>Empresas que mais pedem</h2>
+  <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>Cidade</th><th>Entregas</th><th>Situação</th><th></th></tr></thead><tbody>
+  {% for item in top_companies %}
+    <tr>
+      <td><strong>{{ item.name }}</strong><br><small>{{ item.document_label }}</small></td>
+      <td>{{ item.city|default:"—" }}</td>
+      <td>{{ item.total }}</td>
+      <td><span class="badge {% if item.is_active %}delivered{% else %}canceled{% endif %}">{% if item.is_active %}Ativa{% else %}Suspensa{% endif %}</span></td>
+      <td>{% if user.can_manage_companies %}<a href="{% url 'company_detail' item.pk %}">Abrir</a>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="empty">Cadastre a primeira empresa contratante.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Notificações recentes</h2><a href="{% url 'notification_list' %}">Ver todas</a></div>
+  {% for item in notifications %}
+  <article class="notice {% if item.is_unread %}unread{% endif %}">
+    <div class="notice-head"><strong>{{ item.title }}</strong><span class="badge {% if item.kind == 'request' %}dispatching{% elif item.kind == 'invoice' %}accepted{% else %}delivered{% endif %}">{{ item.get_kind_display }}</span></div>
+    <p class="notice-meta">{{ item.created_at|date:"d/m/Y H:i" }}{% if item.company %} · {{ item.company.document_label }}{% endif %}</p>
+    {% if item.url %}<p><a href="{{ item.url }}">Abrir solicitação</a></p>{% endif %}
+  </article>
+  {% empty %}<p class="empty">Nenhuma notificação ainda.</p>{% endfor %}
+</section>
+{% endblock %}

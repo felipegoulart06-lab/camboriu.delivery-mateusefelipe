@@ -1,0 +1,41 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <title>Trocar conta · Camboriú Delivery</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}">
+  <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+</head>
+<body class="login-page">
+<main class="login-card">
+  <a class="logo dark" href="{% url 'landing' %}"><span></span>Camboriú Delivery</a>
+  <p class="eyebrow">SESSÃO ATIVA</p>
+  <h1>Você já está logado.</h1>
+  <p>Neste navegador só cabe <strong>uma conta por vez</strong>. Agora é <strong>{{ user.get_full_name|default:user.username }}</strong> ({{ user.get_role_display }}).</p>
+
+  <div class="actions" style="margin:22px 0 8px">
+    <a class="button" href="{{ current_home }}">Continuar neste painel</a>
+  </div>
+
+  <div class="login-hints">
+    <p><strong>Quer usar outra conta?</strong> Saia e entre de novo, ou use uma janela anônima para cada perfil.</p>
+  </div>
+
+  <div class="profile-switch">
+    {% for key, item in profiles.items %}
+    <form method="post" action="{% url 'switch_account' %}">{% csrf_token %}
+      <input type="hidden" name="perfil" value="{{ key }}">
+      <button class="button secondary" type="submit">Sair e entrar como {{ item.label }}</button>
+    </form>
+    {% empty %}
+    <form method="post" action="{% url 'switch_account' %}">{% csrf_token %}
+      <button class="button secondary" type="submit">Sair desta conta</button>
+    </form>
+    {% endfor %}
+  </div>
+</main>
+</body>
+</html>

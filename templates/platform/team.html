@@ -1,0 +1,28 @@
+{% extends "platform/base.html" %}
+{% block title %}Equipe interna{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">CAMBORIÚ DELIVERY</p><h1>Equipe interna</h1><p>Admin master administra o sistema; a central cuida do despacho.</p></div>
+  <a class="button" href="{% url 'platform_team_create' %}">+ Novo acesso interno</a>
+</div>
+<section class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Pessoa</th><th>Papel</th><th>Situação</th><th>Último acesso</th><th></th></tr></thead>
+  <tbody>
+  {% for account in accounts %}
+    <tr>
+      <td><strong>{{ account.get_full_name|default:account.username }}</strong><br><small>{{ account.email|default:account.username }}</small></td>
+      <td>{{ account.get_role_display }}</td>
+      <td>{% if account.is_active %}ativo{% else %}inativo{% endif %}</td>
+      <td>{{ account.last_login|date:"d/m/Y H:i"|default:"nunca entrou" }}</td>
+      <td><a href="{% url 'platform_team_edit' account.pk %}">Editar</a> · <a href="{% url 'user_password' account.pk %}">Senha</a></td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nenhum acesso interno cadastrado.</td></tr>{% endfor %}
+  </tbody>
+</table></div></section>
+<section class="card"><h2>Superusuários do Django</h2>
+  <p><small>Contas criadas por <code>createsuperuser</code> têm acesso total, inclusive ao <code>/admin/</code>.</small></p>
+  <div class="table-wrap"><table><thead><tr><th>Usuário</th><th>E-mail</th><th>Último acesso</th></tr></thead><tbody>
+  {% for account in superusers %}<tr><td><strong>{{ account.username }}</strong></td><td>{{ account.email|default:"—" }}</td><td>{{ account.last_login|date:"d/m/Y H:i"|default:"nunca entrou" }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">Nenhum superusuário.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

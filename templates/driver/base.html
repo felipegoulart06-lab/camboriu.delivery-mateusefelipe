@@ -1,0 +1,51 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#092e28">
+  <title>{% block title %}Corridas{% endblock %} · Entregador</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/driver.css' %}">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="driver-menu">
+    <a class="logo" href="{% url 'driver_home' %}"><span></span>Camboriú Delivery</a>
+    <p class="scope">Entregador</p>
+    <p class="state {% if request.driver.status == 'active' %}on{% endif %}">{% if request.driver.status == 'active' %}Disponível{% else %}{{ request.driver.get_status_display }}{% endif %}</p>
+    <nav>
+      <a href="{% url 'driver_home' %}" class="{% if nav == 'home' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg>Início</a>
+      <a href="{% url 'driver_jobs' %}" class="{% if nav == 'jobs' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4v10l-8 4-8-4V7zm0 2.2L6.5 7.6 12 10l5.5-2.4zM6 9.4v6.3l5 2.5v-6.3zm7 8.8 5-2.5V9.4l-5 2.5z"/></svg>Corridas</a>
+      <a href="{% url 'driver_history' %}" class="{% if nav == 'history' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 1-9 9h2a7 7 0 1 0 7-7 6.9 6.9 0 0 0-4.9 2H10v2H4V6h2v1.6A8.9 8.9 0 0 1 12 3zm1 4v5.3l4 2.3-1 1.7-5-2.9V7z"/></svg>Histórico</a>
+      <a href="{% url 'driver_profile' %}" class="{% if nav == 'profile' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 10c4.4 0 8 2.2 8 5v1H4v-1c0-2.8 3.6-5 8-5z"/></svg>Perfil</a>
+    </nav>
+    <div class="account">
+      <strong>{{ request.driver.name|default:user.get_full_name }}</strong>
+      <small>{{ user.email|default:user.username }}</small>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Sair</button></form>
+    </div>
+  </aside>
+  <div class="backdrop" data-close-menu hidden></div>
+  <main class="content">
+    <header class="mobile-head">
+      <button class="menu-toggle" type="button" aria-controls="driver-menu" aria-expanded="false" aria-label="Abrir menu">
+        <span></span><span></span><span></span>
+      </button>
+      <a class="logo" href="{% url 'driver_home' %}"><span></span>Camboriú Delivery</a>
+      <small class="state {% if request.driver.status == 'active' %}on{% endif %}">{% if request.driver.status == 'active' %}Disponível{% else %}{{ request.driver.get_status_display }}{% endif %}</small>
+    </header>
+    {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="{% static 'js/driver-nav.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

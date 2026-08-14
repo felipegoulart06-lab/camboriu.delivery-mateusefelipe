@@ -1,0 +1,27 @@
+{% extends "driver/base.html" %}
+{% block title %}Corridas{% endblock %}
+{% block content %}
+<h1>Minhas corridas</h1>
+<section>
+  <h2>Aguardando aceite</h2>
+  {% for item in pending %}
+    <a class="job urgent" href="{% url 'driver_job_detail' item.pk %}">
+      <div class="job-top"><strong>{{ item.code }}</strong><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></div>
+      <p>{{ item.company.name }} · {{ item.get_item_type_display }} · {{ item.get_priority_display }}</p>
+      <p class="addr">Coleta: {{ item.pickup_address }}</p>
+      <p class="cta">Toque para aceitar</p>
+    </a>
+  {% empty %}<p class="empty">Nenhuma corrida aguardando aceite.</p>{% endfor %}
+</section>
+<section>
+  <h2>Em andamento</h2>
+  {% for item in running %}
+    <a class="job" href="{% url 'driver_job_detail' item.pk %}">
+      <div class="job-top"><strong>{{ item.code }}</strong><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></div>
+      <p>{{ item.company.name }} · {{ item.get_item_type_display }}</p>
+      <p class="addr">{% if item.status == 'in_transit' %}Entrega: {{ item.delivery_address }}{% else %}Coleta: {{ item.pickup_address }}{% endif %}</p>
+      {% if item.status == 'pickup' and not item.has_pickup_checklist %}<p class="cta warn">Checklist antifraude pendente</p>{% endif %}
+    </a>
+  {% empty %}<p class="empty">Nenhuma corrida em andamento.</p>{% endfor %}
+</section>
+{% endblock %}

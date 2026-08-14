@@ -1,0 +1,29 @@
+{% extends "platform/base.html" %}
+{% block title %}Todas as entregas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">OPERAÇÃO COMPLETA</p><h1>Todas as entregas</h1><p>Histórico de todas as empresas atendidas.</p></div>
+</div>
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Código, solicitante ou endereço">
+  <select name="company"><option value="">Todas as empresas</option>{% for item in companies %}<option value="{{ item.pk }}" {% if request.GET.company == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select>
+  <select name="status"><option value="">Todos os status</option>{% for value,label in statuses %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button class="button secondary">Filtrar</button>
+</form>
+<section class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Código</th><th>Empresa</th><th>Item</th><th>Status</th><th>Entregador</th><th>Checklist</th><th>Criada</th></tr></thead>
+  <tbody>
+  {% for item in deliveries %}
+    <tr>
+      <td><a href="{% url 'dispatch_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+      <td>{{ item.company.name }}</td>
+      <td>{{ item.get_item_type_display }}</td>
+      <td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td>
+      <td>{{ item.driver.name|default:"—" }}</td>
+      <td>{% if item.has_pickup_checklist %}<a href="{% url 'delivery_checklist' item.pk %}">termo</a>{% else %}—{% endif %}</td>
+      <td>{{ item.created_at|date:"d/m H:i" }}</td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="empty">Nenhuma entrega encontrada.</td></tr>{% endfor %}
+  </tbody>
+</table></div></section>
+{% endblock %}

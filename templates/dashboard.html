@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Visão geral{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow">CENTRAL DE OPERAÇÕES</p><h1>Bom trabalho, {{ user.first_name|default:user.username }}.</h1><p>Acompanhe o ritmo da operação em tempo real.</p></div>{% if user.can_manage_deliveries %}<a class="button" href="{% url 'delivery_create' %}">+ Nova entrega</a>{% endif %}</div>
+<section class="kpis">
+  <article><small>Total de entregas</small><strong>{{ total }}</strong><span>na base</span></article>
+  <article><small>Em andamento</small><strong>{{ in_progress }}</strong><span>operação ativa</span></article>
+  <article><small>Entregues</small><strong>{{ delivered }}</strong><span>concluídas</span></article>
+  <article class="{% if critical %}danger{% endif %}"><small>Prioridade crítica</small><strong>{{ critical }}</strong><span>requer atenção</span></article>
+</section>
+<div class="split">
+<section class="card"><div class="card-head"><h2>Últimas entregas</h2><a href="{% url 'delivery_list' %}">Ver todas</a></div>
+  <div class="table-wrap"><table><thead><tr><th>Código</th><th>Solicitante</th><th>Status</th><th>Motorista</th></tr></thead><tbody>
+  {% for item in latest %}<tr><td><a href="{% url 'delivery_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td><td>{{ item.requester }}</td><td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td><td>{{ item.driver|default:"—" }}</td></tr>{% empty %}<tr><td colspan="4" class="empty">Nenhuma entrega cadastrada.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<aside class="card resources">
+  <h2>Recursos</h2>
+  <div><strong>{{ drivers }}</strong><span>motoristas ativos · {{ fleet_label }}</span></div>
+  <div><strong>{{ vehicles }}</strong><span>veículos disponíveis · {{ fleet_label }}</span></div>
+  <div><strong>R$ {{ to_invoice }}</strong><span>entregas a faturar</span></div>
+  <div><strong>R$ {{ open_invoices }}</strong><span>faturas em aberto</span></div>
+  <div><a href="{% url 'company_billing' %}">Abrir o financeiro</a></div>
+</aside>
+</div>
+<section class="card"><h2>Entregadores em rota agora</h2>
+  <div class="table-wrap"><table><thead><tr><th>Código</th><th>Entregador</th><th>Status</th><th>Última posição</th><th></th></tr></thead><tbody>
+  {% for item in tracking %}<tr><td><a href="{% url 'delivery_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td><td>{{ item.driver.name|default:"—" }}</td><td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td><td>{{ item.driver.last_position_at|date:"d/m H:i"|default:"aguardando sinal" }}</td><td><a href="{% url 'delivery_tracking' item.pk %}">Ver no mapa</a></td></tr>{% empty %}<tr><td colspan="5" class="empty">Nenhuma corrida em execução no momento.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

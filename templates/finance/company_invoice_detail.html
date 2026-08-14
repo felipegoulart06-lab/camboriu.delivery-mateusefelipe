@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ invoice.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">SUA FATURA</p><h1>{{ invoice.number }}</h1>
+    <p><span class="badge {{ invoice.status }}">{{ invoice.get_status_display }}</span>
+      {% if invoice.is_overdue %}<span class="badge canceled">{{ invoice.days_late }} dia(s) em atraso</span>{% endif %}</p>
+  </div>
+  <div class="head-actions">
+    <a class="button" href="{% url 'company_invoice_document' invoice.pk %}">Baixar PDF</a>
+    <a class="button secondary" href="{% url 'company_billing' %}">Voltar</a>
+  </div>
+</div>
+
+<section class="kpis">
+  <article><small>Total</small><strong>R$ {{ invoice.total }}</strong><span>{{ deliveries|length }} entrega(s)</span></article>
+  <article><small>Vencimento</small><strong>{{ invoice.due_date|date:"d/m/Y" }}</strong><span>escolhido pela sua empresa</span></article>
+  <article><small>Forma</small><strong>{{ invoice.get_kind_display }}</strong><span>{{ invoice.created_at|date:"d/m/Y" }}</span></article>
+  <article><small>Pagamento</small><strong>{% if invoice.paid_at %}{{ invoice.paid_at|date:"d/m/y" }}{% else %}—{% endif %}</strong><span>{{ invoice.payment_method|default:"em aberto" }}</span></article>
+</section>
+
+<section class="card detail">
+  <h2>Boleto</h2>
+  {% if invoice.bank_slip_line %}
+    <p>Copie a linha digitável e pague em qualquer banco até o vencimento:</p>
+    <p class="slip-line">{{ invoice.bank_slip_line }}</p>
+    {% if invoice.bank_slip_url %}<p><a class="button secondary" href="{{ invoice.bank_slip_url }}" target="_blank" rel="noopener">Abrir boleto no banco</a></p>{% endif %}
+  {% elif invoice.kind == 'boleto' %}
+    <p>Boleto em emissão pela Camboriú Delivery. Assim que sair, a linha digitável aparece aqui e no PDF.</p>
+  {% else %}
+    <p>Cobrança por Pix ou dinheiro. Combine o pagamento com a central.</p>
+  {% endif %}
+  {% if invoice.notes %}<h3>Observações</h3><p>{{ invoice.notes|linebreaksbr }}</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Entregas incluídas</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Código</th><th>Entregue em</th><th>Destinos</th><th>Entregador</th><th>Valor</th></tr></thead>
+    <tbody>
+    {% for item in deliveries %}
+      <tr>
+        <td><a href="{% url 'delivery_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+        <td>{{ item.delivered_at|date:"d/m/Y H:i"|default:"—" }}</td>
+        <td>{{ item.destination_count }}</td>
+        <td>{{ item.driver.name|default:"—" }}</td>
+        <td>R$ {{ item.price }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

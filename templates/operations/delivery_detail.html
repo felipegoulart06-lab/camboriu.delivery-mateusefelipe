@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ delivery.code }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">ENTREGA</p><h1>{{ delivery.code }}</h1><p>{{ delivery.requester }} · criada em {{ delivery.created_at|date:"d/m/Y H:i" }}</p></div>
+  <div class="head-actions">
+    {% if delivery.is_trackable %}<a class="button" href="{% url 'delivery_tracking' delivery.pk %}">Acompanhar em tempo real</a>{% endif %}
+    {% if delivery.has_pickup_checklist %}<a class="button secondary" href="{% url 'delivery_checklist' delivery.pk %}">Termo de coleta</a>{% endif %}
+    <a class="button secondary" href="{% url 'company_delivery_document' delivery.pk %}">PDF da solicitação</a>
+    {% if user.can_manage_deliveries %}<a class="button secondary" href="{% url 'delivery_edit' delivery.pk %}">Editar</a>{% endif %}
+  </div>
+</div>
+<div class="detail-grid">
+<section class="card detail"><h2>Operação</h2>
+  <dl>
+    <div><dt>Status</dt><dd><span class="badge {{ delivery.status }}">{{ delivery.get_status_display }}</span></dd></div>
+    <div><dt>Prioridade</dt><dd>{{ delivery.get_priority_display }}</dd></div>
+    <div><dt>Item</dt><dd>{{ delivery.get_item_type_display }}{% if delivery.confidential %} · Sigiloso{% endif %}</dd></div>
+    <div><dt>Valor declarado</dt><dd>R$ {{ delivery.declared_value }}</dd></div>
+    <div><dt>Valor da entrega</dt><dd>R$ {{ delivery.price }} · {{ delivery.destination_count }} destino(s)</dd></div>
+    <div><dt>Faturamento</dt><dd>{% if delivery.invoice %}<a href="{% url 'company_invoice_detail' delivery.invoice.pk %}">{{ delivery.invoice.number }}</a> · {{ delivery.invoice.get_status_display }}{% elif delivery.is_billable %}<a href="{% url 'company_billing' %}">aguardando faturamento</a>{% else %}—{% endif %}</dd></div>
+    <div><dt>Entregador</dt><dd>{{ delivery.driver|default:"Aguardando acionamento da central" }}</dd></div>
+    <div><dt>Veículo</dt><dd>{{ delivery.vehicle|default:"—" }}</dd></div>
+    <div><dt>Aceita em</dt><dd>{{ delivery.accepted_at|date:"d/m/Y H:i"|default:"—" }}</dd></div>
+    <div><dt>Coletada em</dt><dd>{{ delivery.picked_up_at|date:"d/m/Y H:i"|default:"—" }}</dd></div>
+  </dl>
+  <h3>Descrição</h3><p>{{ delivery.description }}</p>
+  {% if delivery.receiver %}<h3>Recebido por</h3><p>{{ delivery.receiver }}{% if delivery.proof %} · {{ delivery.proof }}{% endif %}</p>{% endif %}
+</section>
+<section class="card detail"><h2>Rota e contatos</h2>
+  <h3>Coleta</h3><p>{{ delivery.pickup_address }}<br><small>{{ delivery.pickup_contact }}</small></p>
+  <h3>Destinos ({{ delivery.destination_count }})</h3>
+  <ol class="stops">
+    {% for stop in delivery.destinations %}
+    <li>{{ stop.address }}<br><small>{{ stop.contact|default:"sem contato" }}{% if stop.notes %} · {{ stop.notes }}{% endif %}</small></li>
+    {% endfor %}
+  </ol>
+  <dl>
+    <div><dt>Janela de coleta</dt><dd>{{ delivery.pickup_window|date:"d/m/Y H:i"|default:"—" }}</dd></div>
+    <div><dt>Prazo</dt><dd>{{ delivery.deadline|date:"d/m/Y H:i"|default:"—" }}</dd></div>
+  </dl>
+  <h3>Conferência antifraude</h3>
+  {% if delivery.has_pickup_checklist %}
+    <p>Checklist enviado em {{ delivery.pickup_checklist.submitted_at|date:"d/m/Y H:i" }} com {{ delivery.pickup_checklist.photos.count }} fotos.</p>
+  {% else %}
+    <p class="empty">O entregador preenche o checklist com as 12 fotos no momento da coleta.</p>
+  {% endif %}
+</section>
+</div>
+<section class="card timeline"><h2>Histórico auditável</h2>{% for event in delivery.events.all %}<div class="event"><i></i><div><strong>{{ event.description }}</strong><p>{{ event.get_status_display }} · {{ event.created_at|date:"d/m/Y H:i" }} · {{ event.created_by|default:"Sistema" }}</p></div></div>{% empty %}<p class="empty">Sem eventos.</p>{% endfor %}</section>
+{% endblock %}

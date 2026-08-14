@@ -1,0 +1,90 @@
+{% extends "platform/base.html" %}
+{% block title %}{{ company.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">EMPRESA CONTRATANTE</p>
+    <h1>{{ company.name }}</h1>
+    <p>{{ company.document_label }} · <span class="badge {% if company.is_active %}delivered{% else %}canceled{% endif %}">{% if company.is_active %}Ativa{% else %}Suspensa{% endif %}</span>
+      {% if company.is_registered %}<span class="badge delivered">Cadastro concluído</span>{% else %}<span class="badge dispatching">Cadastro pendente</span>{% endif %}
+      {% if company.can_invoice %}<span class="badge accepted">Fatura em boleto</span>{% endif %}</p>
+  </div>
+  <div class="head-actions">
+    <a class="button" href="{% url 'company_user_create' company.pk %}">+ Novo acesso</a>
+    <a class="button secondary" href="{% url 'company_edit' company.pk %}">Editar dados</a>
+    <a class="button secondary" href="{% url 'company_list' %}">Voltar</a>
+  </div>
+</div>
+
+<section class="kpis">
+  <article><small>Entregas no total</small><strong>{{ deliveries_total }}</strong><span>desde o cadastro</span></article>
+  <article><small>Em aberto</small><strong>{{ deliveries_open }}</strong><span>ainda em andamento</span></article>
+  <article><small>Acessos</small><strong>{{ users|length }}</strong><span>usuários da empresa</span></article>
+  <article><small>Cliente desde</small><strong>{{ company.created_at|date:"d/m/y" }}</strong><span>{{ company.city|default:"cidade não informada" }}</span></article>
+</section>
+
+<div class="detail-grid">
+  <section class="card detail">
+    <h2>Dados</h2>
+    <dl>
+      <div><dt>Razão social</dt><dd>{{ company.legal_name|default:"—" }}</dd></div>
+      <div><dt>Regime tributário</dt><dd>{{ company.get_tax_regime_display|default:"—" }}</dd></div>
+      <div><dt>Inscrição estadual</dt><dd>{{ company.state_registration|default:"—" }}</dd></div>
+      <div><dt>Ramo</dt><dd>{{ company.business_area|default:"—" }}</dd></div>
+      <div><dt>Abertura</dt><dd>{{ company.founded_on|date:"d/m/Y"|default:"—" }}</dd></div>
+      <div><dt>Responsável</dt><dd>{{ company.contact_name|default:"—" }}{% if company.contact_role %} · {{ company.contact_role }}{% endif %}</dd></div>
+      <div><dt>CPF do responsável</dt><dd>{{ company.contact_document|default:"—" }}</dd></div>
+      <div><dt>Telefone</dt><dd>{{ company.phone|default:"—" }}</dd></div>
+      <div><dt>E-mail</dt><dd>{{ company.email|default:"—" }}</dd></div>
+      <div><dt>Financeiro</dt><dd>{{ company.billing_contact|default:"—" }} · vence dia {{ company.invoice_due_day }}</dd></div>
+    </dl>
+    <h3>Endereço</h3><p>{{ company.full_address|default:"não informado" }}</p>
+
+    <h3>Documentos</h3>
+    {% if company.documents %}
+      <ul class="doc-list">
+        {% for label, field, file in company.documents %}
+          <li><a href="{% url 'company_document' company.pk field %}" target="_blank" rel="noopener">{{ label }}</a></li>
+        {% endfor %}
+      </ul>
+    {% else %}<p>Nenhum documento anexado ainda.</p>{% endif %}
+    {% if company.missing_documents %}<p class="field-error">Pendentes: {{ company.missing_documents|join:", " }}.</p>{% endif %}
+
+    {% if company.notes %}<h3>Observações internas</h3><p>{{ company.notes }}</p>{% endif %}
+    <form class="cancel-form" method="post" action="{% url 'company_toggle' company.pk %}"
+          data-confirm="{% if company.is_active %}Suspender {{ company.name }}? A empresa não entra no painel nem pede retirada até ser reativada.{% else %}Reativar o acesso de {{ company.name }}?{% endif %}"
+          data-confirm-ok="{% if company.is_active %}Sim, suspender{% else %}Sim, reativar{% endif %}">{% csrf_token %}
+      <button class="button secondary" type="submit">{% if company.is_active %}Suspender acesso da empresa{% else %}Reativar empresa{% endif %}</button>
+      <small>Empresa suspensa não consegue entrar no painel nem pedir retirada. O cadastro e as solicitações permanecem.</small>
+    </form>
+  </section>
+
+  <section class="card detail">
+    <h2>Acessos da empresa</h2>
+    <div class="table-wrap"><table><thead><tr><th>Usuário</th><th>Papel</th><th>Situação</th><th></th></tr></thead><tbody>
+    {% for account in users %}
+      <tr>
+        <td><strong>{{ account.get_full_name|default:account.username }}</strong><br><small>{{ account.email|default:account.username }}</small></td>
+        <td>{{ account.get_role_display }}</td>
+        <td>{% if account.is_active %}ativo{% else %}inativo{% endif %}</td>
+        <td><a href="{% url 'company_user_edit' company.pk account.pk %}">Editar</a><br><a href="{% url 'user_password' account.pk %}">Trocar senha</a></td>
+      </tr>
+    {% empty %}<tr><td colspan="4" class="empty">Nenhum acesso criado. A empresa ainda não consegue entrar.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+
+<section class="card"><h2>Últimas entregas da empresa</h2>
+  <div class="table-wrap"><table><thead><tr><th>Código</th><th>Solicitante</th><th>Status</th><th>Entregador</th><th>Criada</th></tr></thead><tbody>
+  {% for item in latest %}
+    <tr>
+      <td><a href="{% url 'dispatch_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+      <td>{{ item.requester }}</td>
+      <td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td>
+      <td>{{ item.driver.name|default:"—" }}</td>
+      <td>{{ item.created_at|date:"d/m H:i" }}</td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="empty">Sem entregas ainda.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

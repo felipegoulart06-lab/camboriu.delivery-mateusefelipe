@@ -1,0 +1,29 @@
+{% extends "platform/base.html" %}
+{% block title %}Faturar {{ company.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">COBRANÇA PELA ADMINISTRAÇÃO</p><h1>Faturar {{ company.name }}</h1>
+    <p>{{ company.document_label }} · {% if company.can_invoice %}pode receber boleto{% else %}pagamento por Pix ou dinheiro (recibo){% endif %} · vencimento sugerido {{ due_date|date:"d/m/Y" }}</p>
+  </div>
+  <a class="button secondary" href="{% url 'finance_dashboard' %}">Voltar</a>
+</div>
+<form class="card" method="post">{% csrf_token %}
+  <div class="table-wrap"><table>
+    <thead><tr><th></th><th>Código</th><th>Entregue em</th><th>Destinos</th><th>Entregador</th><th>Valor</th></tr></thead>
+    <tbody>
+    {% for item in available %}
+      <tr>
+        <td><input type="checkbox" name="deliveries" value="{{ item.pk }}" checked></td>
+        <td><strong>{{ item.code }}</strong></td>
+        <td>{{ item.delivered_at|date:"d/m/Y" }}</td>
+        <td>{{ item.destination_count }}</td>
+        <td>{{ item.driver.name|default:"—" }}</td>
+        <td>R$ {{ item.price }}</td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nenhuma entrega concluída aguardando faturamento.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if available %}<div class="actions"><button class="button" type="submit">Gerar fatura</button></div>{% endif %}
+</form>
+{% endblock %}

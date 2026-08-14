@@ -1,0 +1,32 @@
+{% extends "driver/base.html" %}
+{% block title %}Histórico{% endblock %}
+{% block content %}
+<h1>Histórico</h1>
+<section class="stat-grid">
+  <div class="stat"><strong>{{ delivered }}</strong><span>entregas concluídas</span></div>
+  <div class="stat"><strong>{{ canceled }}</strong><span>canceladas</span></div>
+  <div class="stat"><strong>R$ {{ transferred }}</strong><span>já recebido</span></div>
+  <div class="stat {% if pending %}alert{% endif %}"><strong>R$ {{ pending }}</strong><span>a receber</span></div>
+</section>
+
+<section>
+  <h2>Seus repasses</h2>
+  {% for payout in payouts %}
+    <div class="job compact">
+      <div class="job-top"><strong>R$ {{ payout.total }}</strong><span class="badge {% if payout.status == 'paid' %}delivered{% else %}dispatching{% endif %}">{{ payout.get_status_display }}</span></div>
+      <p class="addr">{{ payout.reference_start|date:"d/m/Y" }} a {{ payout.reference_end|date:"d/m/Y" }} · {{ payout.rides }} viagem(ns){% if payout.paid_at %} · pago em {{ payout.paid_at|date:"d/m/Y" }}{% endif %}</p>
+    </div>
+  {% empty %}<p class="empty">Nenhum repasse fechado ainda. Total de ganhos acumulados: R$ {{ earned }}.</p>{% endfor %}
+</section>
+
+<h2>Corridas encerradas</h2>
+<section>
+  {% for item in deliveries %}
+    <a class="job compact" href="{% url 'driver_job_detail' item.pk %}">
+      <div class="job-top"><strong>{{ item.code }}</strong><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></div>
+      <p>{{ item.company.name }}</p>
+      <p class="addr">{{ item.delivered_at|date:"d/m/Y H:i"|default:item.created_at|date:"d/m/Y H:i" }}{% if item.receiver %} · recebido por {{ item.receiver }}{% endif %}</p>
+    </a>
+  {% empty %}<p class="empty">Você ainda não tem corridas encerradas.</p>{% endfor %}
+</section>
+{% endblock %}

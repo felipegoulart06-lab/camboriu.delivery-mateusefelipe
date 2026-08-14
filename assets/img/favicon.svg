@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cambori� Delivery">
+  <defs>
+    <linearGradient id="g" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1a8f7a"/>
+      <stop offset="1" stop-color="#0a4a3f"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#g)"/>
+  <path d="M18 38V26.5c0-1.2.7-2.2 1.8-2.7l11.4-5.1c.5-.2 1.1-.2 1.6 0l11.4 5.1c1.1.5 1.8 1.5 1.8 2.7V38c0 1.3-.8 2.4-2 2.9l-11.2 4.7c-.5.2-1.1.2-1.6 0L20 40.9c-1.2-.5-2-1.6-2-2.9z" fill="none" stroke="#f7faf8" stroke-width="3.2" stroke-linejoin="round"/>
+  <path d="M32 18.8v27.4M20.5 25.2 32 30.4l11.5-5.2" fill="none" stroke="#d8c3a5" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

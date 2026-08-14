@@ -1,0 +1,28 @@
+{% extends "platform/base.html" %}
+{% block title %}Tabela de preços{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">FINANCEIRO</p><h1>Tabela de preços</h1><p>Usada para calcular o valor de cada solicitação e o repasse do entregador.</p></div>
+  <a class="button secondary" href="{% url 'finance_dashboard' %}">Voltar</a>
+</div>
+<div class="message">A tabela vale para as próximas solicitações. Entregas já criadas mantêm o valor e podem ser ajustadas uma a uma.</div>
+<form class="card form-card" method="post" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-grid">
+    {% for field in form %}
+      <div>
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <div class="actions"><button class="button" type="submit">Salvar tabela</button></div>
+</form>
+<section class="card detail">
+  <h2>Como o valor é calculado</h2>
+  <p>Valor base + (destinos além do primeiro × valor por destino adicional) + acréscimo da prioridade.</p>
+  <p>O repasse do entregador é {{ policy.driver_share_percent }}% do valor final. A diferença é a margem da operação.</p>
+  <p><small>Última atualização em {{ policy.updated_at|date:"d/m/Y H:i" }} por {{ policy.updated_by.get_full_name|default:"sistema" }}.</small></p>
+</section>
+{% endblock %}

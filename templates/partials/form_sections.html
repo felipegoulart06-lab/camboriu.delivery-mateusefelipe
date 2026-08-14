@@ -1,0 +1,26 @@
+{% comment %}Renderiza um formulário longo em blocos. Espera `form` com a propriedade `sections`.{% endcomment %}
+{% for section in form.sections %}
+  <section class="form-section">
+    <header class="form-section-head">
+      <h2>{{ section.title }}</h2>
+      {% if section.description %}<p>{{ section.description }}</p>{% endif %}
+    </header>
+    <div class="form-grid">
+      {% for item in section.items %}
+        <div class="{{ item.css }}">
+          <label for="{{ item.field.id_for_label }}">{{ item.field.label }}{% if item.field.field.required %} *{% endif %}</label>
+          {{ item.field }}
+          {% if item.saved %}
+            <small class="saved-file">
+              Arquivo atual:
+              {% if item.saved_url %}<a href="{{ item.saved_url }}" target="_blank" rel="noopener">ver documento</a>{% else %}enviado{% endif %}
+              · envie outro apenas se quiser substituir.
+            </small>
+          {% endif %}
+          {% for error in item.field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+          {% if item.field.help_text %}<small>{{ item.field.help_text }}</small>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% endfor %}

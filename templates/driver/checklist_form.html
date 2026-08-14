@@ -1,0 +1,47 @@
+{% extends "driver/base.html" %}
+{% load static %}
+{% block title %}Checklist da coleta{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'driver_job_detail' delivery.pk %}">← Corrida {{ delivery.code }}</a>
+<h1>Checklist antifraude</h1>
+<p class="sub">{{ delivery.company.name }} · {{ delivery.get_item_type_display }}</p>
+<p class="warn-note">As 12 fotos são obrigatórias. Elas ficam anexadas ao termo de coleta e protegem você e a empresa.</p>
+
+<form method="post" enctype="multipart/form-data" novalidate id="checklist-form">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+
+  <section class="panel">
+    <h2>Conferência do item</h2>
+    {% for field in form.data_fields %}
+      <div class="field {% if field.field.widget.input_type == 'checkbox' %}check{% endif %}">
+        {% if field.field.widget.input_type == 'checkbox' %}
+          <label for="{{ field.id_for_label }}">{{ field }} <span>{{ field.label }}{% if field.field.required %} *{% endif %}</span></label>
+        {% else %}
+          <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>{{ field }}
+        {% endif %}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="panel">
+    <h2>Fotos obrigatórias <span class="counter" data-photos="counter">0/12</span></h2>
+    <div class="photo-slots">
+      {% for field in form.photo_fields %}
+        <div class="slot {% if field.errors %}has-error{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+  <button class="button big" type="submit">Enviar checklist e liberar transporte</button>
+</form>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/checklist.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <title>Entrar · Camboriú Delivery</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}">
+  <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+</head>
+<body class="login-page">
+<main class="login-card">
+  <a class="logo dark" href="{% url 'landing' %}"><span></span>Camboriú Delivery</a>
+  <p class="eyebrow">ACESSO AO ERP</p>
+  {% if selected_profile %}
+  <h1>Entrar como {{ selected_profile.label }}.</h1>
+  <p>{{ selected_profile.hint }}.</p>
+  {% else %}
+  <h1>Bem-vindo de volta.</h1>
+  <p>Entre com o login do painel que você quer usar. Cada perfil abre a área certa.</p>
+  {% endif %}
+
+  {% if locked_out %}<div class="message error">Muitas tentativas de acesso. Aguarde {{ lock_minutes }} minutos e tente de novo, ou fale com a central para redefinir a senha.</div>{% endif %}
+  {% if csrf_expired %}<div class="message error">A sessão de segurança expirou. Digite usuário e senha de novo nesta página (não use uma aba antiga).</div>{% endif %}
+  {% for error in form.non_field_errors %}<div class="message error">{{ error }}</div>{% endfor %}
+  {% if form.errors and not form.non_field_errors %}<div class="message error">Usuário ou senha inválidos.</div>{% endif %}
+
+  <form method="post" action="{% url 'login' %}">{% csrf_token %}
+    <label for="{{ form.username.id_for_label }}">E-mail / usuário</label>{{ form.username }}
+    <label for="{{ form.password.id_for_label }}">Senha</label>{{ form.password }}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <button class="button" type="submit">Entrar no painel</button>
+  </form>
+
+  <div class="login-hints">
+    <p><strong>Importante:</strong> no mesmo navegador só fica uma conta. Para ver os 3 painéis ao mesmo tempo, use 3 janelas anônimas.</p>
+  </div>
+
+  {% if profiles %}
+  <div class="profile-switch">
+    {% for key, item in profiles.items %}
+    <a class="button secondary" href="{% url 'login' %}?perfil={{ key }}&trocar=1">{{ item.label }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="login-hints">
+    {% for key, item in profiles.items %}<p><strong>{{ item.label }}</strong> · {{ item.username }}</p>{% endfor %}
+    <p>Ambiente de demonstração. Em produção esta lista não aparece.</p>
+  </div>
+  {% else %}
+  <div class="login-hints">
+    <p>Esqueceu a senha? Fale com a central da Camboriú Delivery para receber um novo acesso.</p>
+  </div>
+  {% endif %}
+</main>
+</body>
+</html>

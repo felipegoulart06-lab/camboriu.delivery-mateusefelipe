@@ -1,0 +1,28 @@
+{% extends "platform/base.html" %}
+{% block title %}Empresas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">CARTEIRA DE CLIENTES</p><h1>Empresas contratantes</h1><p>Quem pode pedir retirada pela Camboriú Delivery.</p></div>
+  <a class="button" href="{% url 'company_create' %}">+ Cadastrar empresa</a>
+</div>
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ search }}" placeholder="Buscar por nome, CNPJ/CPF ou cidade">
+  <button class="button secondary">Buscar</button>
+</form>
+<section class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Empresa</th><th>Contato</th><th>Cidade</th><th>Acessos</th><th>Entregas</th><th>Situação</th><th></th></tr></thead>
+  <tbody>
+  {% for item in companies %}
+    <tr>
+      <td><a href="{% url 'company_detail' item.pk %}"><strong>{{ item.name }}</strong></a><br><small>{{ item.document_label }}{% if not item.is_registered %} · cadastro pendente{% endif %}</small></td>
+      <td>{{ item.contact_name|default:"—" }}<br><small>{{ item.phone|default:item.email|default:"sem contato" }}</small></td>
+      <td>{{ item.city|default:"—" }}</td>
+      <td>{{ item.users_total }}</td>
+      <td>{{ item.deliveries_total }}</td>
+      <td><span class="badge {% if item.is_active %}delivered{% else %}canceled{% endif %}">{% if item.is_active %}Ativa{% else %}Suspensa{% endif %}</span></td>
+      <td><a href="{% url 'company_edit' item.pk %}">Editar</a></td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="empty">Nenhuma empresa cadastrada ainda.</td></tr>{% endfor %}
+  </tbody>
+</table></div></section>
+{% endblock %}

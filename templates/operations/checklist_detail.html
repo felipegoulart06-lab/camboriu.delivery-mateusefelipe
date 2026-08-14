@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Termo de coleta {{ delivery.code }}{% endblock %}
+{% block content %}
+<div class="page-head no-print">
+  <div><p class="eyebrow">TERMO DE COLETA · ANEXO DO CONTRATO</p><h1>{{ delivery.code }}</h1><p>Conferência antifraude registrada no momento da coleta.</p></div>
+  <div class="head-actions">
+    <button class="button" type="button" onclick="window.print()">Imprimir / salvar PDF</button>
+    <a class="button secondary" href="{% url 'delivery_detail' delivery.pk %}">Voltar</a>
+  </div>
+</div>
+<section class="card detail term">
+  <h2>Identificação</h2>
+  <dl>
+    <div><dt>Empresa contratante</dt><dd>{{ delivery.company.name }}</dd></div>
+    <div><dt>{{ delivery.company.get_document_type_display }}</dt><dd>{{ delivery.company.document }}</dd></div>
+    <div><dt>Entrega</dt><dd>{{ delivery.code }} · {{ delivery.get_item_type_display }}</dd></div>
+    <div><dt>Valor declarado</dt><dd>R$ {{ delivery.declared_value }}</dd></div>
+    <div><dt>Entregador</dt><dd>{{ checklist.driver.name }} · CNH {{ checklist.driver.cnh }}</dd></div>
+    <div><dt>Veículo</dt><dd>{{ delivery.vehicle|default:"—" }}</dd></div>
+    <div><dt>Coleta em</dt><dd>{{ checklist.submitted_at|date:"d/m/Y H:i" }}</dd></div>
+    <div><dt>Endereço da coleta</dt><dd>{{ delivery.pickup_address }}</dd></div>
+    <div><dt>Responsável que entregou</dt><dd>{{ checklist.handover_name }} · {{ checklist.handover_document }}</dd></div>
+    <div><dt>Volumes</dt><dd>{{ checklist.package_count }}</dd></div>
+    <div><dt>Lacre</dt><dd>{{ checklist.seal_number|default:"não aplicável" }}</dd></div>
+    <div><dt>Geolocalização</dt><dd>{% if checklist.lat %}{{ checklist.lat|floatformat:6 }}, {{ checklist.lng|floatformat:6 }}{% else %}não capturada{% endif %}</dd></div>
+  </dl>
+
+  <h2>Conferência declarada pelo entregador</h2>
+  <ul class="checks">
+    <li class="{% if checklist.identity_checked %}ok{% else %}no{% endif %}">Identidade do responsável confirmada</li>
+    <li class="{% if checklist.item_matches_request %}ok{% else %}no{% endif %}">Item confere com a solicitação</li>
+    <li class="{% if checklist.packaging_intact %}ok{% else %}no{% endif %}">Embalagem íntegra, sem violação</li>
+    <li class="{% if checklist.seal_applied %}ok{% else %}no{% endif %}">Lacre aplicado e fotografado</li>
+    <li class="{% if checklist.documents_checked %}ok{% else %}no{% endif %}">Documento de acompanhamento conferido</li>
+    <li class="{% if checklist.temperature_ok %}ok{% else %}no{% endif %}">Acondicionamento térmico adequado</li>
+    <li class="{% if checklist.photos_are_original %}ok{% else %}no{% endif %}">Fotos tiradas no local e no momento da coleta</li>
+  </ul>
+  {% if checklist.notes %}<h3>Observações</h3><p>{{ checklist.notes }}</p>{% endif %}
+
+  <h2>Registro fotográfico ({{ checklist.photos.count }} de 12)</h2>
+  <div class="photo-grid">
+    {% for photo in checklist.photos.all %}
+      <figure>
+        <a href="{% url 'checklist_photo' delivery.pk photo.pk %}" target="_blank" rel="noopener">
+          <img src="{% url 'checklist_photo' delivery.pk photo.pk %}" alt="{{ photo.get_slot_display }}" loading="lazy">
+        </a>
+        <figcaption>{{ photo.get_slot_display }}<br><small>{{ photo.uploaded_at|date:"d/m/Y H:i" }}</small></figcaption>
+      </figure>
+    {% endfor %}
+  </div>
+
+  <p class="term-footer">Documento gerado pelo sistema Camboriú Delivery em {{ checklist.submitted_at|date:"d/m/Y H:i" }}. As imagens e o horário são registrados no ato da coleta e servem como prova para as duas partes.</p>
+</section>
+{% endblock %}

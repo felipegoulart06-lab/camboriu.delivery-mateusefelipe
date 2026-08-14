@@ -1,0 +1,135 @@
+{% extends "platform/base.html" %}
+{% block title %}Financeiro{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">CONTABILIDADE DA OPERAÇÃO</p><h1>Financeiro</h1><p>Tudo que entra das empresas e tudo que sai para os entregadores.</p></div>
+  <div class="head-actions">
+    <a class="button" href="{% url 'invoice_list' %}">Faturas</a>
+    <a class="button secondary" href="{% url 'payout_list' %}">Repasses</a>
+    {% if user.can_manage_companies %}<a class="button secondary" href="{% url 'finance_pricing' %}">Tabela de preços</a>{% endif %}
+  </div>
+</div>
+
+<section class="kpis">
+  <article><small>Recebido no mês</small><strong>R$ {{ headline.received_month }}</strong><span>faturas baixadas</span></article>
+  <article class="{% if headline.overdue_total %}danger{% endif %}"><small>A receber</small><strong>R$ {{ headline.receivable_total }}</strong><span>{{ headline.overdue_count }} fatura(s) vencida(s) · R$ {{ headline.overdue_total }}</span></article>
+  <article><small>Repassado aos entregadores</small><strong>R$ {{ headline.payout_paid_total }}</strong><span>R$ {{ headline.payout_pending_total }} a repassar</span></article>
+  <article><small>Margem do mês</small><strong>R$ {{ headline.margin_month }}</strong><span>de R$ {{ headline.revenue_month }} em {{ headline.rides_month }} viagem(ns)</span></article>
+</section>
+
+<div class="split">
+  <section class="card">
+    <div class="card-head"><h2>Receita e repasse por mês</h2><small>últimos 6 meses</small></div>
+    <div class="chart">
+      {% for item in series %}
+      <div class="chart-col">
+        <div class="chart-bars">
+          <span class="bar revenue" style="height:{{ item.revenue_height }}%" title="Receita R$ {{ item.revenue }}"></span>
+          <span class="bar payout" style="height:{{ item.payout_height }}%" title="Repasse R$ {{ item.payout }}"></span>
+        </div>
+        <strong>R$ {{ item.revenue }}</strong>
+        <small>{{ item.month|date:"M/y" }} · {{ item.rides }} viagem(ns)</small>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="chart-legend"><span class="key revenue"></span> Recebível da empresa <span class="key payout"></span> Repasse ao entregador</p>
+  </section>
+  <aside class="card resources">
+    <h2>Posição de caixa</h2>
+    <div><strong>R$ {{ headline.received_total }}</strong><span>recebido desde o início</span></div>
+    <div><strong>R$ {{ headline.not_billed_total }}</strong><span>entregue e ainda não faturado</span></div>
+    <div><strong>R$ {{ headline.invoiced_month }}</strong><span>faturado no mês</span></div>
+    <div><strong>R$ {{ headline.payout_open_total }}</strong><span>repasses fechados a pagar</span></div>
+    <div><strong>{{ policy.driver_share_percent }}%</strong><span>parte do entregador na tabela atual</span></div>
+  </aside>
+</div>
+
+{% if overdue %}
+<section class="card">
+  <h2>Faturas vencidas</h2>
+  <div class="table-wrap"><table><thead><tr><th>Fatura</th><th>Empresa</th><th>Vencimento</th><th>Atraso</th><th>Valor</th></tr></thead><tbody>
+  {% for invoice in overdue %}
+    <tr>
+      <td><a href="{% url 'invoice_detail' invoice.pk %}"><strong>{{ invoice.number }}</strong></a></td>
+      <td>{{ invoice.company.name }}</td>
+      <td>{{ invoice.due_date|date:"d/m/Y" }}</td>
+      <td>{{ invoice.days_late }} dia(s)</td>
+      <td>R$ {{ invoice.total }}</td>
+    </tr>
+  {% endfor %}
+  </tbody></table></div>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Por entregador</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Entregador</th><th>Viagens</th><th>Gerou p/ operação</th><th>Ganhos</th><th>Já repassado</th><th>Repasse fechado</th><th>A repassar</th><th></th></tr></thead>
+    <tbody>
+    {% for item in drivers %}
+      <tr>
+        <td><strong>{{ item.name }}</strong><br><small>{{ item.contract }}</small></td>
+        <td>{{ item.rides }}</td>
+        <td>R$ {{ item.revenue }}</td>
+        <td>R$ {{ item.earned }}</td>
+        <td><strong>R$ {{ item.transferred }}</strong></td>
+        <td>R$ {{ item.scheduled }}</td>
+        <td class="{% if item.pending %}warn-cell{% endif %}">R$ {{ item.pending }}</td>
+        <td>{% if item.pending %}<a href="{% url 'payout_create' %}">Fechar repasse</a>{% endif %}</td>
+      </tr>
+    {% empty %}<tr><td colspan="8" class="empty">Nenhum entregador com viagens concluídas.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card">
+  <h2>Por empresa</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Empresa</th><th>Documento</th><th>Entregas</th><th>Total das entregas</th><th>A faturar</th><th>Recebido</th><th>Em aberto</th><th></th></tr></thead>
+    <tbody>
+    {% for item in companies %}
+      <tr>
+        <td><strong>{{ item.name }}</strong><br><small>{% if item.can_invoice %}fatura em boleto{% else %}paga por entrega{% endif %}</small></td>
+        <td>{{ item.document_label }}</td>
+        <td>{{ item.rides }}</td>
+        <td>R$ {{ item.billed_total }}</td>
+        <td>R$ {{ item.not_billed }}</td>
+        <td>R$ {{ item.received }}</td>
+        <td class="{% if item.receivable %}warn-cell{% endif %}">R$ {{ item.receivable }}</td>
+        <td>{% if user.can_manage_companies and item.not_billed %}<a href="{% url 'invoice_create' item.company.pk %}">Faturar</a>{% endif %}</td>
+      </tr>
+    {% empty %}<tr><td colspan="8" class="empty">Nenhuma empresa cadastrada.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<div class="detail-grid">
+  <section class="card">
+    <div class="card-head"><h2>Últimas faturas</h2><a href="{% url 'invoice_list' %}">Ver todas</a></div>
+    <div class="table-wrap"><table><thead><tr><th>Fatura</th><th>Empresa</th><th>Vence</th><th>Valor</th><th>Situação</th></tr></thead><tbody>
+    {% for invoice in recent_invoices %}
+      <tr>
+        <td><a href="{% url 'invoice_detail' invoice.pk %}">{{ invoice.number }}</a></td>
+        <td>{{ invoice.company.name }}</td>
+        <td>{{ invoice.due_date|date:"d/m/y" }}</td>
+        <td>R$ {{ invoice.total }}</td>
+        <td><span class="badge {{ invoice.status }}">{{ invoice.get_status_display }}</span></td>
+      </tr>
+    {% empty %}<tr><td colspan="5" class="empty">Nenhuma fatura emitida.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Últimos repasses</h2><a href="{% url 'payout_list' %}">Ver todos</a></div>
+    <div class="table-wrap"><table><thead><tr><th>Entregador</th><th>Período</th><th>Valor</th><th>Situação</th></tr></thead><tbody>
+    {% for payout in recent_payouts %}
+      <tr>
+        <td><a href="{% url 'payout_detail' payout.pk %}">{{ payout.driver.name }}</a></td>
+        <td>{{ payout.reference_start|date:"d/m" }} a {{ payout.reference_end|date:"d/m" }}</td>
+        <td>R$ {{ payout.total }}</td>
+        <td><span class="badge {% if payout.status == 'paid' %}delivered{% else %}dispatching{% endif %}">{{ payout.get_status_display }}</span></td>
+      </tr>
+    {% empty %}<tr><td colspan="4" class="empty">Nenhum repasse fechado.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+{% endblock %}

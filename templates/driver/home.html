@@ -1,0 +1,47 @@
+{% extends "driver/base.html" %}
+{% block title %}Início{% endblock %}
+{% block content %}
+<p class="hello">Bom trabalho,</p>
+<h1>{{ driver.name.split.0 }}.</h1>
+
+<section class="stat-grid">
+  <div class="stat {% if pending_count %}alert{% endif %}"><strong>{{ pending_count }}</strong><span>para aceitar</span></div>
+  <div class="stat"><strong>{{ running_count }}</strong><span>em andamento</span></div>
+  <div class="stat"><strong>{{ delivered_today }}</strong><span>entregues hoje</span></div>
+  <div class="stat"><strong>{{ delivered_total }}</strong><span>no total</span></div>
+</section>
+
+<section class="stat-grid two">
+  <div class="stat"><strong>R$ {{ earned_month }}</strong><span>seus ganhos no mês</span></div>
+  <div class="stat"><strong>R$ {{ pending_payout }}</strong><span>a receber</span></div>
+</section>
+
+{% if checklist_pending %}
+<div class="warn-note">Você tem {{ checklist_pending }} coleta(s) com checklist pendente. Sem as 12 fotos não é possível sair com a carga.</div>
+{% endif %}
+
+{% if next_job %}
+<section>
+  <h2>Sua próxima parada</h2>
+  <a class="job {% if next_job.status == 'dispatching' %}urgent{% endif %}" href="{% url 'driver_job_detail' next_job.pk %}">
+    <div class="job-top"><strong>{{ next_job.code }}</strong><span class="badge {{ next_job.status }}">{{ next_job.get_status_display }}</span></div>
+    <p>{{ next_job.company.name }} · {{ next_job.get_item_type_display }}</p>
+    <p class="addr">{% if next_job.status == 'in_transit' %}Entrega: {{ next_job.delivery_address }}{% else %}Coleta: {{ next_job.pickup_address }}{% endif %}</p>
+    <p class="cta">{% if next_job.status == 'dispatching' %}Toque para aceitar{% else %}Abrir corrida{% endif %}</p>
+  </a>
+</section>
+{% else %}
+<section class="panel"><h2>Nenhuma corrida agora</h2><p>Quando a central te acionar, a corrida aparece aqui na hora.</p></section>
+{% endif %}
+
+<section>
+  <h2>Aguardando seu aceite</h2>
+  {% for item in pending %}
+    <a class="job urgent" href="{% url 'driver_job_detail' item.pk %}">
+      <div class="job-top"><strong>{{ item.code }}</strong><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></div>
+      <p>{{ item.company.name }} · {{ item.get_priority_display }}</p>
+      <p class="addr">Coleta: {{ item.pickup_address }}</p>
+    </a>
+  {% empty %}<p class="empty">Nada pendente de aceite.</p>{% endfor %}
+</section>
+{% endblock %}

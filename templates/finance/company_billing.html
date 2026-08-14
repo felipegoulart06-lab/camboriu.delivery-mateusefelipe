@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Financeiro{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">FINANCEIRO DA SUA EMPRESA</p><h1>Faturamento</h1>
+    <p>{{ company.document_label }} · {% if can_invoice %}você pode faturar em boleto com o vencimento que preferir{% else %}cadastro em CPF: pagamento por entrega via Pix{% endif %}</p>
+  </div>
+  {% if can_invoice and available %}<a class="button" href="{% url 'company_invoice_request' %}">Faturar {{ available|length }} entrega(s)</a>{% endif %}
+</div>
+
+<section class="kpis">
+  <article><small>A faturar</small><strong>R$ {{ available_total }}</strong><span>{{ available|length }} entrega(s) concluída(s)</span></article>
+  <article class="{% if overdue %}danger{% endif %}"><small>Em aberto</small><strong>R$ {{ open_total }}</strong><span>{{ overdue|length }} fatura(s) vencida(s)</span></article>
+  <article><small>Já pago</small><strong>R$ {{ paid_total }}</strong><span>faturas quitadas</span></article>
+  <article><small>Vencimento preferido</small><strong>dia {{ company.invoice_due_day }}</strong><span><a href="{% url 'company_profile' %}">alterar nas configurações</a></span></article>
+</section>
+
+{% if overdue %}
+<div class="message error">
+  Você tem fatura vencida:
+  {% for invoice in overdue %}<a href="{% url 'company_invoice_detail' invoice.pk %}">{{ invoice.number }}</a> ({{ invoice.days_late }} dia(s)){% if not forloop.last %}, {% endif %}{% endfor %}.
+</div>
+{% endif %}
+
+<section class="card">
+  <div class="card-head"><h2>Entregas aguardando faturamento</h2>{% if can_invoice and available %}<a href="{% url 'company_invoice_request' %}">Gerar boleto</a>{% endif %}</div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Código</th><th>Entregue em</th><th>Destinos</th><th>Valor</th><th></th></tr></thead>
+    <tbody>
+    {% for item in available %}
+      <tr>
+        <td><a href="{% url 'delivery_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+        <td>{{ item.delivered_at|date:"d/m/Y H:i"|default:"—" }}</td>
+        <td>{{ item.destination_count }}</td>
+        <td>R$ {{ item.price }}</td>
+        <td><a href="{% url 'company_delivery_document' item.pk %}">PDF</a></td>
+      </tr>
+    {% empty %}<tr><td colspan="5" class="empty">Nenhuma entrega concluída aguardando faturamento.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card">
+  <h2>Suas faturas</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Fatura</th><th>Cobrança</th><th>Entregas</th><th>Vencimento</th><th>Valor</th><th>Situação</th><th></th></tr></thead>
+    <tbody>
+    {% for invoice in invoices %}
+      <tr>
+        <td><a href="{% url 'company_invoice_detail' invoice.pk %}"><strong>{{ invoice.number }}</strong></a></td>
+        <td>{{ invoice.get_kind_display }}</td>
+        <td>{{ invoice.deliveries.count }}</td>
+        <td>{{ invoice.due_date|date:"d/m/Y" }}</td>
+        <td>R$ {{ invoice.total }}</td>
+        <td><span class="badge {{ invoice.status }}">{{ invoice.get_status_display }}</span></td>
+        <td><a href="{% url 'company_invoice_document' invoice.pk %}">PDF</a></td>
+      </tr>
+    {% empty %}<tr><td colspan="7" class="empty">Você ainda não tem faturas.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "platform/base.html" %}
+{% block title %}Acionar entregador{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">ACIONAMENTO</p><h1>{{ delivery.code }}</h1><p>{{ delivery.company.name }} · {{ delivery.get_item_type_display }} · {{ delivery.get_priority_display }}</p></div>
+  <a class="button secondary" href="{% url 'dispatch_board' %}">Voltar para a central</a>
+</div>
+<div class="detail-grid">
+  <form class="card form-card" method="post" novalidate>{% csrf_token %}
+    <h2>Escolha quem vai atender</h2>
+    {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="form-grid">
+      {% for field in form %}
+        <div><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+      {% endfor %}
+    </div>
+    <div class="actions"><button class="button" type="submit">Acionar e avisar a empresa</button></div>
+    <p><small>Ao acionar, a corrida aparece no painel do entregador para aceite e a empresa passa a ver o andamento.</small></p>
+  </form>
+  <section class="card detail">
+    <h2>Dados da solicitação</h2>
+    <h3>Coleta</h3><p>{{ delivery.pickup_address }}<br><small>{{ delivery.pickup_contact }}</small></p>
+    <h3>Entrega</h3><p>{{ delivery.delivery_address }}<br><small>{{ delivery.delivery_contact }}</small></p>
+    <dl>
+      <div><dt>Valor declarado</dt><dd>R$ {{ delivery.declared_value }}</dd></div>
+      <div><dt>Sigiloso</dt><dd>{{ delivery.confidential|yesno:"sim,não" }}</dd></div>
+      <div><dt>Janela</dt><dd>{{ delivery.pickup_window|date:"d/m H:i"|default:"—" }}</dd></div>
+      <div><dt>Prazo</dt><dd>{{ delivery.deadline|date:"d/m H:i"|default:"—" }}</dd></div>
+    </dl>
+    <h3>Descrição</h3><p>{{ delivery.description }}</p>
+  </section>
+</div>
+{% endblock %}

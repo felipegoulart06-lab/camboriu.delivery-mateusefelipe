@@ -1,0 +1,75 @@
+{% extends "driver/base.html" %}
+{% load static %}
+{% block title %}{{ delivery.code }}{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'driver_jobs' %}">← Minhas corridas</a>
+<h1>{{ delivery.code }}</h1>
+<p class="sub">{{ delivery.company.name }} · <span class="badge {{ delivery.status }}">{{ delivery.get_status_display }}</span></p>
+
+{% if tracking_on %}
+  <div class="tracker" id="tracker"
+       data-ping-url="{% url 'driver_ping' delivery.pk %}"
+       data-csrf="{{ csrf_token }}"
+       data-interval="{{ ping_seconds }}">
+    <strong data-tracker="state">Ligando o rastreio…</strong>
+    <small data-tracker="detail">A empresa acompanha sua chegada no mapa dela.</small>
+  </div>
+{% endif %}
+
+<section class="panel">
+  <h2>Coleta</h2>
+  <p>{{ delivery.pickup_address }}</p>
+  <p><small>{{ delivery.pickup_contact }}</small></p>
+  <a class="button secondary" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination={{ delivery.pickup_address|urlencode }}">Abrir rota da coleta</a>
+</section>
+
+<section class="panel">
+  <h2>{% if delivery.is_multi_stop %}Entregas ({{ delivery.destination_count }} destinos){% else %}Entrega{% endif %}</h2>
+  {% for stop in delivery.destinations %}
+  <div class="stop-item">
+    <p><strong>{{ stop.order }}º</strong> {{ stop.address }}</p>
+    <p><small>{{ stop.contact|default:"sem contato" }}{% if stop.notes %} · {{ stop.notes }}{% endif %}</small></p>
+    <a class="button secondary" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination={{ stop.address|urlencode }}">Abrir rota</a>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>Item</h2>
+  <p>{{ delivery.get_item_type_display }}{% if delivery.confidential %} · sigiloso{% endif %}</p>
+  <p>{{ delivery.description }}</p>
+  <p><small>Valor declarado R$ {{ delivery.declared_value }} · prazo {{ delivery.deadline|date:"d/m H:i"|default:"livre" }}</small></p>
+  <p><small>Seu repasse desta corrida: <strong>R$ {{ delivery.driver_payout_amount }}</strong></small></p>
+</section>
+
+<div class="stack">
+  {% if can_accept %}
+    <form method="post" action="{% url 'driver_accept_job' delivery.pk %}">{% csrf_token %}<button class="button big" type="submit">Aceitar corrida</button></form>
+  {% endif %}
+  {% if can_start_pickup %}
+    <form method="post" action="{% url 'driver_start_pickup' delivery.pk %}">{% csrf_token %}<button class="button big" type="submit">Sair para a coleta</button></form>
+  {% endif %}
+  {% if can_checklist %}
+    <a class="button big" href="{% url 'driver_checklist' delivery.pk %}">Preencher checklist da coleta</a>
+    <p class="warn-note">Obrigatório: 12 fotos e a conferência do item antes de sair com a carga.</p>
+  {% endif %}
+  {% if can_complete %}
+    <a class="button big" href="{% url 'driver_complete_job' delivery.pk %}">Finalizar entrega</a>
+  {% endif %}
+</div>
+
+{% if checklist and checklist.is_submitted %}
+<section class="panel">
+  <h2>Checklist enviado</h2>
+  <p>{{ checklist.submitted_at|date:"d/m/Y H:i" }} · {{ checklist.photos.count }} fotos · recebido de {{ checklist.handover_name }}</p>
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2>Histórico</h2>
+  {% for event in delivery.events.all %}<p class="event">{{ event.created_at|date:"d/m H:i" }} · {{ event.description }}</p>{% empty %}<p class="empty">Sem eventos.</p>{% endfor %}
+</section>
+{% endblock %}
+{% block scripts %}
+{% if tracking_on %}<script src="{% static 'js/driver-tracker.js' %}" defer></script>{% endif %}
+{% endblock %}

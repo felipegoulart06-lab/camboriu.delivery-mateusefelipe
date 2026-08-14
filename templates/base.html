@@ -1,0 +1,64 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Painel{% endblock %} · Camboriú Delivery</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% if user.is_platform_staff %}{% url 'platform_home' as home_url %}{% else %}{% url 'dashboard' as home_url %}{% endif %}
+<div class="shell">
+  <aside class="sidebar">
+    <a class="logo" href="{{ home_url }}"><span></span>Camboriú Delivery</a>
+    <p class="scope">{% if user.is_master %}Admin master{% elif user.is_platform_staff %}Central de despacho{% else %}{{ user.company.name|default:"Painel" }}{% endif %}</p>
+    <nav>
+      {% if user.is_platform_staff %}
+        {% include "partials/nav_link.html" with target="platform_home" label="Visão geral" %}
+        {% include "partials/nav_link.html" with target="dispatch_board" label="Despacho" %}
+        {% include "partials/nav_link.html" with target="platform_integration" label="Integrações" %}
+        {% include "partials/nav_link.html" with target="notification_list" label="Notificações" badge=unread_notifications %}
+        {% include "partials/nav_link.html" with target="finance_dashboard" label="Financeiro" %}
+        {% include "partials/nav_link.html" with target="platform_deliveries" label="Todas as entregas" %}
+        {% if user.can_manage_companies %}{% include "partials/nav_link.html" with target="company_list" label="Empresas" %}{% endif %}
+        {% include "partials/nav_link.html" with target="platform_drivers" label="Entregadores" %}
+        {% include "partials/nav_link.html" with target="vehicle_list" label="Veículos" %}
+        {% if user.can_manage_companies %}{% include "partials/nav_link.html" with target="platform_team" label="Equipe interna" %}{% endif %}
+      {% else %}
+        {% include "partials/nav_link.html" with target="dashboard" label="Visão geral" %}
+        {% include "partials/nav_link.html" with target="delivery_list" label="Minhas entregas" %}
+        {% if user.can_manage_deliveries %}{% include "partials/nav_link.html" with target="delivery_create" label="Pedir retirada" %}{% endif %}
+        {% include "partials/nav_link.html" with target="company_billing" label="Financeiro" %}
+        {% include "partials/nav_link.html" with target="driver_list" label="Entregadores" %}
+        {% include "partials/nav_link.html" with target="vehicle_list" label="Veículos" %}
+        {% if user.can_manage_company_profile %}{% include "partials/nav_link.html" with target="company_profile" label="Configurações" %}{% endif %}
+      {% endif %}
+    </nav>
+    <div class="account">
+      <strong>{{ user.get_full_name|default:user.username }}</strong>
+      <small>{{ user.company.name|default:"Plataforma" }} · {{ user.get_role_display }}</small>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Sair</button></form>
+    </div>
+  </aside>
+  <main class="content">
+    <header class="mobile-head"><a class="logo" href="{{ home_url }}"><span></span>Camboriú Delivery</a></header>
+    {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<dialog id="confirm-dialog" class="confirm-dialog">
+  <h2>Confirme a ação</h2>
+  <p data-confirm-text></p>
+  <div class="actions">
+    <button type="button" class="button secondary" data-confirm-cancel>Voltar</button>
+    <button type="button" class="button" data-confirm-ok>Sim, confirmar</button>
+  </div>
+</dialog>
+<script src="{% static 'js/confirm-action.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

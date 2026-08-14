@@ -1,0 +1,24 @@
+{% extends "platform/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">ACESSO AO SISTEMA</p><h1>{{ title }}</h1>
+    <p>O e-mail é o login. {% if account %}Deixe a senha em branco para mantê-la.{% else %}Informe a senha do primeiro acesso.{% endif %}</p>
+  </div>
+  <a class="button secondary" href="{% if company %}{% url 'company_detail' company.pk %}{% else %}{% url 'platform_team' %}{% endif %}">Cancelar</a>
+</div>
+<form class="card form-card" method="post" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-grid">
+    {% for field in form %}
+      <div class="{% if field.name == 'is_active' %}check{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {{ field }}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+  <div class="actions"><button class="button" type="submit">Salvar acesso</button></div>
+</form>
+{% endblock %}

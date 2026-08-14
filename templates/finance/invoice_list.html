@@ -1,0 +1,34 @@
+{% extends "platform/base.html" %}
+{% block title %}Faturas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">CONTAS A RECEBER</p><h1>Faturas</h1><p>R$ {{ not_billed }} em entregas concluídas ainda sem fatura.</p></div>
+  <a class="button secondary" href="{% url 'finance_dashboard' %}">Voltar ao financeiro</a>
+</div>
+<form class="filters" method="get">
+  <select name="company"><option value="">Todas as empresas</option>{% for item in companies %}<option value="{{ item.pk }}" {% if request.GET.company == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select>
+  <select name="status">
+    <option value="">Todas as situações</option>
+    <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>Vencidas</option>
+    {% for value,label in statuses %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="button secondary">Filtrar</button>
+</form>
+<section class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Fatura</th><th>Empresa</th><th>Cobrança</th><th>Entregas</th><th>Vencimento</th><th>Valor</th><th>Situação</th><th></th></tr></thead>
+  <tbody>
+  {% for invoice in invoices %}
+    <tr>
+      <td><a href="{% url 'invoice_detail' invoice.pk %}"><strong>{{ invoice.number }}</strong></a><br><small>{{ invoice.created_at|date:"d/m/Y" }}</small></td>
+      <td>{{ invoice.company.name }}<br><small>{{ invoice.company.document_label }}</small></td>
+      <td>{{ invoice.get_kind_display }}</td>
+      <td>{{ invoice.deliveries.count }}</td>
+      <td>{{ invoice.due_date|date:"d/m/Y" }}{% if invoice.is_overdue %}<br><small class="field-error">{{ invoice.days_late }} dia(s) em atraso</small>{% endif %}</td>
+      <td>R$ {{ invoice.total }}</td>
+      <td><span class="badge {{ invoice.status }}">{{ invoice.get_status_display }}</span></td>
+      <td><a href="{% url 'invoice_document' invoice.pk %}">PDF</a></td>
+    </tr>
+  {% empty %}<tr><td colspan="8" class="empty">Nenhuma fatura encontrada.</td></tr>{% endfor %}
+  </tbody>
+</table></div></section>
+{% endblock %}

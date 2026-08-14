@@ -1,0 +1,56 @@
+{% extends "platform/base.html" %}
+{% block title %}Repasse {{ payout.driver.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">REPASSE AO ENTREGADOR</p><h1>{{ payout.driver.name }}</h1>
+    <p>{{ payout.reference_start|date:"d/m/Y" }} a {{ payout.reference_end|date:"d/m/Y" }}
+      <span class="badge {% if payout.status == 'paid' %}delivered{% else %}dispatching{% endif %}">{{ payout.get_status_display }}</span></p>
+  </div>
+  <a class="button secondary" href="{% url 'payout_list' %}">Voltar</a>
+</div>
+
+<section class="kpis">
+  <article><small>Total do repasse</small><strong>R$ {{ payout.total }}</strong><span>{{ payout.rides }} viagem(ns)</span></article>
+  <article><small>Vínculo</small><strong>{{ payout.driver.get_contract_type_display }}</strong><span>{{ payout.driver.phone }}</span></article>
+  <article><small>Fechado em</small><strong>{{ payout.created_at|date:"d/m/y" }}</strong><span>{{ payout.created_by.get_full_name|default:"administração" }}</span></article>
+  <article><small>Pago em</small><strong>{% if payout.paid_at %}{{ payout.paid_at|date:"d/m/y" }}{% else %}—{% endif %}</strong><span>{{ payout.method|default:"a pagar" }}</span></article>
+</section>
+
+{% if user.can_manage_companies and payout.status == 'open' %}
+<section class="card detail">
+  <h2>Registrar pagamento</h2>
+  <form method="post" action="{% url 'payout_pay' payout.pk %}">{% csrf_token %}
+    <div class="form-grid">
+      {% for field in payment_form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+    </div>
+    <div class="actions"><button class="button" type="submit">Marcar como pago</button></div>
+  </form>
+  <form class="cancel-form" method="post" action="{% url 'payout_reopen' payout.pk %}"
+        data-confirm="Desfazer o repasse de {{ payout.driver.name }} no valor de R$ {{ payout.total }}? As entregas voltam para a fila e este lote deixa de existir."
+        data-confirm-ok="Sim, desfazer o repasse">{% csrf_token %}
+    <button class="button secondary" type="submit">Desfazer repasse</button>
+    <small>As entregas voltam para a fila e o lote é encerrado. Confirme uma segunda vez antes de continuar.</small>
+  </form>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Entregas do repasse</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Código</th><th>Empresa</th><th>Entregue em</th><th>Destinos</th><th>Valor cobrado</th><th>Repasse</th></tr></thead>
+    <tbody>
+    {% for item in deliveries %}
+      <tr>
+        <td><a href="{% url 'dispatch_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td>
+        <td>{{ item.company.name }}</td>
+        <td>{{ item.delivered_at|date:"d/m/Y H:i"|default:"—" }}</td>
+        <td>{{ item.destination_count }}</td>
+        <td>R$ {{ item.price }}</td>
+        <td><strong>R$ {{ item.driver_payout_amount }}</strong></td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nenhuma entrega neste repasse.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

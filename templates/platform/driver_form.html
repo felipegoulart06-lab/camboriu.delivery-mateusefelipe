@@ -1,0 +1,20 @@
+{% extends "platform/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">CADASTRO DE ENTREGADOR</p><h1>{{ title }}</h1>
+    <p>Ficha completa do entregador, com habilitação e documentos. O e-mail e a senha aqui são o login que ele usa no celular.{% if driver %} Deixe a senha em branco para mantê-la.{% endif %}</p>
+  </div>
+  <a class="button secondary" href="{% url 'platform_drivers' %}">Cancelar</a>
+</div>
+{% if driver and driver.missing_documents %}
+  <div class="message warn">Documentos pendentes: {{ driver.missing_documents|join:", " }}.</div>
+{% endif %}
+<form class="card form-card" method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+  {% if form.errors %}<div class="message error">Alguns campos precisam de atenção. Veja os avisos em vermelho abaixo.</div>{% endif %}
+  {% include "partials/form_sections.html" %}
+  <div class="actions"><button class="button" type="submit">Salvar entregador</button></div>
+</form>
+{% endblock %}

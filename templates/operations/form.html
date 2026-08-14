@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow">CADASTRO</p><h1>{{ title }}</h1><p>Preencha os campos obrigatórios para continuar. Os anexos ficam guardados com acesso restrito.</p></div></div>
+<form class="card form-card" method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+  {% if form.errors %}<div class="message error">Alguns campos precisam de atenção. Veja os avisos em vermelho abaixo.</div>{% endif %}
+  {% if form.sections %}
+    {% include "partials/form_sections.html" %}
+  {% else %}
+    <div class="form-grid">{% for field in form %}<div class="{% if field.name == 'description' or field.name == 'notes' or field.name == 'pickup_address' or field.name == 'delivery_address' %}wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</div>{% endfor %}</div>
+  {% endif %}
+  <div class="actions"><button class="button" type="submit">Salvar</button>{% if cancel_pk %}<a class="button secondary" href="{% url cancel_url cancel_pk %}">Cancelar</a>{% else %}<a class="button secondary" href="{% url cancel_url %}">Cancelar</a>{% endif %}</div>
+</form>
+{% endblock %}

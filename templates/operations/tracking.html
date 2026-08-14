@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Rastreio {{ delivery.code }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">RASTREIO EM TEMPO REAL</p><h1>{{ delivery.code }}</h1><p>{{ delivery.pickup_address }}</p></div>
+  <a class="button secondary" href="{% url 'delivery_detail' delivery.pk %}">Voltar para a entrega</a>
+</div>
+<div class="tracking-grid">
+  <section class="card map-card">
+    <div id="tracking-map" class="map" role="application" aria-label="Mapa com a posição do entregador"></div>
+  </section>
+  <aside class="card detail">
+    <h2>Entregador a caminho</h2>
+    <dl>
+      <div><dt>Status</dt><dd><span class="badge {{ delivery.status }}" data-tracking="status">{{ delivery.get_status_display }}</span></dd></div>
+      <div><dt>Entregador</dt><dd data-tracking="driver">{{ delivery.driver.name|default:"—" }}</dd></div>
+      <div><dt>Telefone</dt><dd>{{ delivery.driver.phone|default:"—" }}</dd></div>
+      <div><dt>Veículo</dt><dd>{{ delivery.vehicle|default:"—" }}</dd></div>
+      <div><dt>Posição de</dt><dd data-tracking="updated">aguardando sinal</dd></div>
+    </dl>
+    <p class="tracking-note" data-tracking="note">O mapa atualiza sozinho enquanto o entregador estiver em rota.</p>
+    <h3>Coleta</h3><p>{{ delivery.pickup_address }}<br><small>{{ delivery.pickup_contact }}</small></p>
+    <h3>Entrega</h3><p>{{ delivery.delivery_address }}<br><small>{{ delivery.delivery_contact }}</small></p>
+    {% if delivery.has_pickup_checklist %}<a class="button secondary" href="{% url 'delivery_checklist' delivery.pk %}">Ver termo de coleta</a>{% endif %}
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ config|json_script:"tracking-config" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+<script src="{% static 'js/tracking.js' %}" defer></script>
+{% endblock %}

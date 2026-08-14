@@ -1,0 +1,1 @@
+<a href="{% url target %}" class="{% if request.resolver_match.url_name == target or request.resolver_match.url_name == target|add:'_pdf' %}active{% endif %}">{{ label }}{% if badge %}<span class="nav-badge">{{ badge }}</span>{% endif %}</a>

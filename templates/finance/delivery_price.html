@@ -1,0 +1,20 @@
+{% extends "platform/base.html" %}
+{% block title %}Valores {{ delivery.code }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">AJUSTE DE VALORES</p><h1>{{ delivery.code }}</h1>
+    <p>{{ delivery.company.name }} · {{ delivery.destination_count }} destino(s) · {{ delivery.get_priority_display }}</p>
+  </div>
+  <a class="button secondary" href="{% url 'dispatch_detail' delivery.pk %}">Cancelar</a>
+</div>
+<form class="card form-card" method="post" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-grid">
+    {% for field in form %}
+      <div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    {% endfor %}
+  </div>
+  <div class="actions"><button class="button" type="submit">Salvar valores</button></div>
+</form>
+{% endblock %}

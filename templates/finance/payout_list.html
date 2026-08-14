@@ -1,0 +1,31 @@
+{% extends "platform/base.html" %}
+{% block title %}Repasses{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">CONTAS A PAGAR</p><h1>Repasses aos entregadores</h1><p>R$ {{ headline.payout_pending_total }} em entregas concluídas ainda sem repasse fechado.</p></div>
+  <div class="head-actions">
+    {% if user.can_manage_companies %}<a class="button" href="{% url 'payout_create' %}">+ Fechar repasse</a>{% endif %}
+    <a class="button secondary" href="{% url 'finance_dashboard' %}">Voltar ao financeiro</a>
+  </div>
+</div>
+
+{% if pending_drivers %}
+<div class="message">Com repasse pendente: {% for driver in pending_drivers %}<strong>{{ driver.name }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}.</div>
+{% endif %}
+
+<section class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Entregador</th><th>Período</th><th>Viagens</th><th>Valor</th><th>Situação</th><th>Pago em</th></tr></thead>
+  <tbody>
+  {% for payout in payouts %}
+    <tr>
+      <td><a href="{% url 'payout_detail' payout.pk %}"><strong>{{ payout.driver.name }}</strong></a></td>
+      <td>{{ payout.reference_start|date:"d/m/Y" }} a {{ payout.reference_end|date:"d/m/Y" }}</td>
+      <td>{{ payout.rides }}</td>
+      <td>R$ {{ payout.total }}</td>
+      <td><span class="badge {% if payout.status == 'paid' %}delivered{% else %}dispatching{% endif %}">{{ payout.get_status_display }}</span></td>
+      <td>{{ payout.paid_at|date:"d/m/Y"|default:"—" }}</td>
+    </tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nenhum repasse fechado ainda.</td></tr>{% endfor %}
+  </tbody>
+</table></div></section>
+{% endblock %}

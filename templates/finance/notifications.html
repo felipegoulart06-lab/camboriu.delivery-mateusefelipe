@@ -1,0 +1,24 @@
+{% extends "platform/base.html" %}
+{% block title %}Notificações{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">CENTRAL DE AVISOS</p><h1>Notificações</h1><p>Cada solicitação chega aqui com o cadastro completo da empresa que pediu.</p></div>
+  <div class="head-actions">
+    <a class="button secondary" href="{% url 'notification_list' %}?filtro=nao-lidas">Só não lidas</a>
+    <form method="post" action="{% url 'notifications_read' %}">{% csrf_token %}<button class="button" type="submit">Marcar todas como lidas</button></form>
+  </div>
+</div>
+<section class="card">
+  {% for item in notifications %}
+  <article class="notice {% if item.is_unread %}unread{% endif %}">
+    <div class="notice-head">
+      <strong>{{ item.title }}</strong>
+      <span class="badge {% if item.kind == 'request' %}dispatching{% elif item.kind == 'invoice' %}accepted{% else %}delivered{% endif %}">{{ item.get_kind_display }}</span>
+    </div>
+    <p class="notice-meta">{{ item.created_at|date:"d/m/Y H:i" }}{% if item.company %} · {{ item.company.document_label }}{% endif %}</p>
+    {% if item.body %}<pre class="notice-body">{{ item.body }}</pre>{% endif %}
+    {% if item.url %}<p><a href="{{ item.url }}">Abrir</a></p>{% endif %}
+  </article>
+  {% empty %}<p class="empty">Nenhuma notificação até agora.</p>{% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Cadastro da empresa{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">CONFIGURAÇÕES DA EMPRESA</p>
+    <h1>{% if first_time %}Cadastre sua empresa{% else %}Cadastro da empresa{% endif %}</h1>
+    <p>
+      {% if first_time %}
+        Estes dados vão no cabeçalho de toda solicitação e das faturas. Só depois de concluir você libera o resto do painel.
+      {% else %}
+        Cadastro concluído em {{ company.registered_at|date:"d/m/Y H:i" }}. Mantenha os dados em dia — eles saem nos PDFs.
+      {% endif %}
+    </p>
+  </div>
+  {% if not first_time %}<a class="button secondary" href="{% url 'dashboard' %}">Voltar ao painel</a>{% endif %}
+</div>
+
+{% if first_time %}
+<div class="message">Cadastros em <strong>CNPJ ou MEI</strong> podem faturar as entregas em boleto com o vencimento que preferirem. Cadastros em <strong>CPF</strong> pagam por entrega via Pix.</div>
+{% endif %}
+{% if company.missing_documents %}
+<div class="message warn">Faltam anexar: {{ company.missing_documents|join:", " }}.</div>
+{% endif %}
+
+<form class="card form-card" method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+  {% if form.errors %}<div class="message error">Alguns campos precisam de atenção. Veja os avisos em vermelho abaixo.</div>{% endif %}
+  {% include "partials/form_sections.html" %}
+  <div class="actions"><button class="button" type="submit">{% if first_time %}Concluir cadastro e liberar o painel{% else %}Salvar cadastro{% endif %}</button></div>
+</form>
+{% endblock %}

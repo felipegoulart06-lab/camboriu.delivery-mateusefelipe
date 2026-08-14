@@ -1,0 +1,25 @@
+{% extends "platform/base.html" %}
+{% block title %}Boleto {{ invoice.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">EMISSÃO DE BOLETO</p><h1>Boleto da fatura {{ invoice.number }}</h1>
+    <p>{{ invoice.company.billing_name }} · R$ {{ invoice.total }}</p>
+  </div>
+  <a class="button secondary" href="{% url 'invoice_detail' invoice.pk %}">Cancelar</a>
+</div>
+<div class="message">Gere o boleto no internet banking da Camboriú Delivery e cole aqui a linha digitável. O sistema não emite boleto direto no banco.</div>
+<form class="card form-card" method="post" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-grid">
+    {% for field in form %}
+      <div class="{% if field.name == 'notes' or field.name == 'bank_slip_line' %}wide{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <div class="actions"><button class="button" type="submit">Salvar boleto</button></div>
+</form>
+{% endblock %}

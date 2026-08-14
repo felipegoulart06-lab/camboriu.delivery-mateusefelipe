@@ -1,0 +1,49 @@
+{% extends "driver/base.html" %}
+{% block title %}Perfil{% endblock %}
+{% block content %}
+<h1>Meu perfil</h1>
+
+<section class="panel availability">
+  <h2>Disponibilidade</h2>
+  <p>Hoje você está <strong>{% if driver.status == 'active' %}disponível{% else %}{{ driver.get_status_display|lower }}{% endif %}</strong> para a central.</p>
+  <form method="post" action="{% url 'driver_availability' %}">{% csrf_token %}
+    {% if driver.status == 'active' %}
+      <input type="hidden" name="status" value="away">
+      <button class="btn ghost" type="submit">Ficar fora de operação</button>
+    {% else %}
+      <input type="hidden" name="status" value="active">
+      <button class="btn" type="submit">Estou disponível</button>
+    {% endif %}
+  </form>
+</section>
+
+<section class="stat-grid two">
+  <div class="stat"><strong>{{ stats.delivered }}</strong><span>entregas concluídas</span></div>
+  <div class="stat"><strong>{{ stats.total }}</strong><span>corridas recebidas</span></div>
+</section>
+
+<section class="panel">
+  <h2>Meus dados</h2>
+  <dl class="data">
+    <div><dt>Nome</dt><dd>{{ driver.name }}</dd></div>
+    <div><dt>Login</dt><dd>{{ user.email|default:user.username }}</dd></div>
+    <div><dt>CPF</dt><dd>{{ driver.cpf }}</dd></div>
+    <div><dt>Telefone</dt><dd>{{ driver.phone }}</dd></div>
+    <div><dt>CNH</dt><dd>{{ driver.cnh }} · categoria {{ driver.cnh_category }}{% if driver.cnh_has_ear %} · EAR{% endif %}</dd></div>
+    <div><dt>CNH vence</dt><dd>{{ driver.cnh_expires_at|date:"d/m/Y"|default:"—" }}</dd></div>
+    <div><dt>Exame médico</dt><dd>{{ driver.medical_exam_expires_at|date:"d/m/Y"|default:"—" }}</dd></div>
+    <div><dt>Vínculo</dt><dd>{{ driver.get_contract_type_display }}</dd></div>
+    <div><dt>Endereço</dt><dd>{{ driver.full_address|default:"—" }}</dd></div>
+    <div><dt>Repasse</dt><dd>{% if driver.pix_key %}Pix {{ driver.pix_key }}{% elif driver.bank_name %}{{ driver.bank_name }} · ag {{ driver.bank_agency }} · cc {{ driver.bank_account }}{% else %}—{% endif %}</dd></div>
+  </dl>
+  {% for label, value, expired in driver.expiring %}
+    <p class="hint {% if expired %}alert{% endif %}">{{ label }} {% if expired %}venceu{% else %}vence{% endif %} em {{ value|date:"d/m/Y" }}. Envie o documento novo para a central.</p>
+  {% endfor %}
+  {% if driver.missing_documents %}
+    <p class="hint alert">Documentos pendentes na central: {{ driver.missing_documents|join:", " }}.</p>
+  {% endif %}
+  <p class="hint">Precisa corrigir algum dado? Fale com a central da Camboriú Delivery.</p>
+</section>
+
+<form class="logout" method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn ghost" type="submit">Sair do app</button></form>
+{% endblock %}

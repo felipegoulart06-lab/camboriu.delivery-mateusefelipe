@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">SOLICITAÇÃO DE RETIRADA</p><h1>{{ title }}</h1><p>Uma viagem pode ter vários destinos. A central da Camboriú Delivery recebe o pedido com o cadastro da sua empresa.</p></div>
+  <a class="button secondary" href="{% if cancel_pk %}{% url cancel_url cancel_pk %}{% else %}{% url cancel_url %}{% endif %}">Cancelar</a>
+</div>
+
+<div class="message">Valor base R$ {{ policy.base_price }} + R$ {{ policy.price_per_extra_stop }} por destino adicional. Urgente soma R$ {{ policy.urgent_surcharge }} e crítica R$ {{ policy.critical_surcharge }}.</div>
+
+<form class="card form-card" method="post" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-grid">
+    {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+  </div>
+
+  <h2>Destinos adicionais</h2>
+  <p><small>Preencha só o que precisar. O primeiro destino é o endereço de entrega acima; estes entram como 2º, 3º e assim por diante.</small></p>
+  {{ stops.management_form }}
+  {% if stops.non_form_errors %}<div class="message error">{{ stops.non_form_errors }}</div>{% endif %}
+  <div class="stop-list">
+    {% for stop in stops %}
+    <fieldset class="stop">
+      <legend>Destino {{ forloop.counter|add:1 }}</legend>
+      {% for hidden in stop.hidden_fields %}{{ hidden }}{% endfor %}
+      <div class="form-grid">
+        {% for field in stop.visible_fields %}
+          {% if field.name == 'DELETE' %}
+            <div class="check"><label for="{{ field.id_for_label }}">Remover este destino</label>{{ field }}</div>
+          {% else %}
+            <div class="{% if field.name == 'address' %}wide{% endif %}">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+              {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+  </div>
+
+  <div class="actions"><button class="button" type="submit">Enviar solicitação</button></div>
+</form>
+{% endblock %}
