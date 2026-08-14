@@ -225,10 +225,10 @@ Isso apaga empresas, entregadores, frota, entregas e todos os logins, e recria s
 
 ## Deploy na Vercel
 
-O Django sobe como função serverless em São Paulo (`gru1`), no mesmo continente do Supabase. Arquivos: `api/index.py` (WSGI), `vercel.json` e `.python-version` (3.12).
+O Django sobe como função serverless em São Paulo (`gru1`), no mesmo continente do Supabase. A Vercel detecta o `manage.py` e usa `config/wsgi.py`. Arquivos: `vercel.json`, `.python-version` (3.12) e `config/wsgi.py`.
 
-1. Publique o repositório no GitHub e importe o projeto em [vercel.com/new](https://vercel.com/new). Framework: **Other**.
-2. Em **Settings → Environment Variables**, marque todas como disponíveis em Production, Preview **e Build**:
+1. Publique o repositório no GitHub e importe o projeto em [vercel.com/new](https://vercel.com/new). Framework: **Django** (ou deixe a detecção automática).
+2. Em **Settings → Environment Variables**, cadastre pelo menos `SECRET_KEY` e `DATABASE_URL`. No **runtime** elas são obrigatórias; no **build** o Django aceita ficar sem elas (a Vercel lê o `manage.py` antes de injetar segredo de runtime). Marque as duas como disponíveis em Production e Preview:
 
 | Variável | Valor |
 | --- | --- |
@@ -246,7 +246,7 @@ O Django sobe como função serverless em São Paulo (`gru1`), no mesmo continen
 
 A Vercel injeta `VERCEL`, `VERCEL_URL` e `VERCEL_PROJECT_PRODUCTION_URL`. O Django acrescenta esses hosts sozinho e, na Vercel, troca a porta 5432 do pooler pela 6543 (modo transação) e desliga conexão persistente.
 
-3. Deploy. O `buildCommand` roda `collectstatic` **sem precisar do banco** (o Postgres só entra em cena no request). O WhiteNoise entrega CSS/JS de dentro da função. Sem `DATABASE_URL` no runtime a aplicação não sobe — só o empacotamento dos estáticos é que dispensa o Postgres.
+3. Deploy. O `collectstatic` e a inspeção do `manage.py` rodam no build sem Postgres. No request, sem `SECRET_KEY` e `DATABASE_URL` a aplicação não sobe.
 4. Domínio próprio: Settings → Domains, depois some o host em `ALLOWED_HOSTS` e a origem `https://...` em `CSRF_TRUSTED_ORIGINS`.
 
 A Vercel **não guarda arquivo em disco**. Fotos do checklist, CNH e contrato social vão para o bucket privado `media` do Supabase Storage. Sem as chaves S3 o login funciona, mas o upload some no request seguinte. O download continua passando pelas views autenticadas — o bucket não é público.

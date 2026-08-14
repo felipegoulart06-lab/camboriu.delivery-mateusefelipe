@@ -345,6 +345,38 @@ class VercelDeployTests(TestCase):
         self.assertFalse(comando_dispensa_banco(["manage.py", "runserver"]))
         self.assertFalse(comando_dispensa_banco(["manage.py"]))
 
+    def test_inspecao_da_vercel_dispensa_segredo_no_build(self):
+        from core.deploy import inspecao_de_build
+
+        self.assertTrue(inspecao_de_build({"VERCEL": "1", "CI": "1"}, ["-c"]))
+        self.assertTrue(inspecao_de_build({}, ["manage.py", "collectstatic", "--noinput"]))
+        self.assertFalse(inspecao_de_build({"VERCEL": "1", "VERCEL_ENV": "production"}, ["config/wsgi.py"]))
+
+    def test_inspecao_do_manage_py_na_vercel_nao_exige_secret_key(self):
+        import os
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        env = os.environ.copy()
+        env.update({
+            "VERCEL": "1",
+            "CI": "1",
+            "DEBUG": "0",
+            "DEMO_MODE": "0",
+            "SECRET_KEY": "",
+            "DATABASE_URL": "",
+            "DJANGO_SETTINGS_MODULE": "config.settings",
+        })
+        resultado = subprocess.run(
+            [sys.executable, "manage.py", "check"],
+            cwd=str(Path(__file__).resolve().parent.parent),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(resultado.returncode, 0, resultado.stderr + resultado.stdout)
+
     def test_variavel_em_branco_na_vercel_usa_o_padrao(self):
         from core.deploy import env_flag, env_float, env_int, env_value
 

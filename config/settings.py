@@ -18,8 +18,8 @@ from urllib.parse import unquote, urlparse
 from django.core.exceptions import ImproperlyConfigured
 
 from core.deploy import (
-    comando_dispensa_banco, debug_default, env_flag, env_float, env_int, env_value,
-    extra_hosts, extra_origins, merge_unique, on_vercel, serverless_database,
+    debug_default, env_flag, env_float, env_int, env_value, extra_hosts,
+    extra_origins, inspecao_de_build, merge_unique, on_vercel, serverless_database,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -54,7 +54,7 @@ SECRET_KEY = env_value(os.environ, "SECRET_KEY", "django-insecure-development-on
 # SECURITY WARNING: don't run with debug turned on in production!
 ON_VERCEL = on_vercel(os.environ)
 DEBUG = flag("DEBUG", debug_default(os.environ))
-COMANDO_SEM_BANCO = comando_dispensa_banco(sys.argv)
+COMANDO_SEM_BANCO = inspecao_de_build(os.environ, sys.argv)
 if (
     not DEBUG
     and SECRET_KEY == "django-insecure-development-only-change-me"
@@ -281,7 +281,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = Path(env_value(os.environ, "MEDIA_ROOT", "/tmp/camboriu-media" if ON_VERCEL else str(BASE_DIR / "media")))
 FILE_UPLOAD_PERMISSIONS = 0o640
 if ON_VERCEL:
-    FILE_UPLOAD_TEMP_DIR = "/tmp"
+    FILE_UPLOAD_TEMP_DIR = next(
+        (pasta for pasta in ("/tmp", os.getenv("TEMP"), os.getenv("TMP")) if pasta and os.path.isdir(pasta)),
+        str(BASE_DIR),
+    )
 
 CHECKLIST_MAX_PHOTO_MB = env_int(os.environ, "CHECKLIST_MAX_PHOTO_MB", 12)
 TRACKING_PING_SECONDS = env_int(os.environ, "TRACKING_PING_SECONDS", 15)

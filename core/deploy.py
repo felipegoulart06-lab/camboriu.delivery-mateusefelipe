@@ -17,6 +17,17 @@ def comando_dispensa_banco(argv):
     return (argv[1] if len(argv) > 1 else "") == "collectstatic"
 
 
+def inspecao_de_build(env, argv=None):
+    """Build da Vercel: collectstatic e a leitura do manage.py rodam sem SECRET_KEY/DATABASE_URL.
+
+    A Vercel marca o build com CI=1. No runtime da função isso não vem, então o pedido
+    real continua exigindo as variáveis de produção.
+    """
+    if comando_dispensa_banco(argv or []):
+        return True
+    return on_vercel(env) and str(env.get("CI") or "").strip() in {"1", "true", "yes"}
+
+
 def env_value(env, name, default=""):
     """Na Vercel variável definida em branco conta como ausente — o padrão do getenv não cobre isso."""
     valor = env.get(name)
