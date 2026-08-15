@@ -84,7 +84,7 @@ def invoice_request(request):
             messages.success(
                 request,
                 f"Fatura {invoice.number} gerada. O boleto com vencimento em "
-                f"{invoice.due_date:%d/%m/%Y} aparece aqui assim que a Camboriú Delivery emitir.",
+                f"{invoice.due_date:%d/%m/%Y} aparece aqui assim que a SC Transporte Executivo emitir.",
             )
             return redirect("company_invoice_detail", pk=invoice.pk)
     return render(request, "finance/company_invoice_request.html", {

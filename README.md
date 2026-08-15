@@ -1,4 +1,4 @@
-# Camboriú Delivery ERP
+# SC Transporte Executivo
 
 MVP SaaS multiempresa em Django para gestão de entregas especializadas. O Django é a aplicação oficial; os arquivos PHP na raiz foram preservados apenas como legado visual e não participam do fluxo.
 
@@ -196,7 +196,7 @@ O banco de produção é o PostgreSQL do projeto Supabase. A conexão sai de `DA
 $env:DATABASE_URL="postgresql://postgres.<ref>:<SENHA>@aws-0-<regiao>.pooler.supabase.com:5432/postgres"
 python manage.py migrate
 python manage.py harden_database --check
-python manage.py bootstrap --nome "Camboriú Delivery" --cnpj "00.000.000/0001-00" --master-email diretoria@suaempresa.com.br
+python manage.py bootstrap --nome "SC Transporte Executivo" --cnpj "00.000.000/0001-00" --master-email diretoria@suaempresa.com.br
 ```
 
 - **Porta 5432** (conexão de sessão ou direta) para rodar `migrate`. **Porta 6543** é o pooler em modo transação: serve para a aplicação no dia a dia e o Django se ajusta sozinho a ele (sem conexão persistente e sem cursor no servidor).

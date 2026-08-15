@@ -5,6 +5,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 VERCEL_PREVIEW_HOST = ".vercel.app"
 VERCEL_PREVIEW_ORIGIN = "https://*.vercel.app"
+PRODUCTION_HOSTS = ("www.sc.transporteexecutivo.com", "sc.transporteexecutivo.com")
 SUPABASE_TRANSACTION_PORT = "6543"
 CHAVE_DESENVOLVIMENTO = "django-insecure-development-only-change-me"
 
@@ -65,8 +66,8 @@ def debug_default(env):
 
 
 def extra_hosts(env):
-    """Hosts que a Vercel injeta a cada deploy (produção e preview)."""
-    hosts = []
+    """Hosts que a Vercel injeta a cada deploy (produção e preview), mais o domínio próprio."""
+    hosts = list(PRODUCTION_HOSTS)
     for chave in ("VERCEL_URL", "VERCEL_BRANCH_URL", "VERCEL_PROJECT_PRODUCTION_URL"):
         valor = (env.get(chave) or "").strip().removeprefix("https://").removeprefix("http://").split("/")[0]
         if valor and valor not in hosts:

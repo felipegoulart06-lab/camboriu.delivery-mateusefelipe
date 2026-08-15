@@ -78,7 +78,7 @@ def delivery_create(request):
             delivery = form.save()
             numbered_stops(stops, delivery)
             PricingPolicy.current().apply_to(delivery)
-            delivery.register_event("Solicitação enviada para a central da Camboriú Delivery", request.user)
+            delivery.register_event("Solicitação enviada para a central da SC Transporte Executivo", request.user)
             _announce_request(delivery, request.user)
         messages.success(
             request,

@@ -82,7 +82,7 @@ def company_profile_required(view):
 
 
 def platform_required(view):
-    """Central de despacho da Camboriú Delivery."""
+    """Central de despacho da SC Transporte Executivo."""
 
     @login_required
     @wraps(view)
@@ -90,7 +90,7 @@ def platform_required(view):
         if not request.user.is_platform_staff:
             if request.user.is_driver:
                 return redirect("driver_home")
-            messages.error(request, "Área exclusiva da equipe da Camboriú Delivery.")
+            messages.error(request, "Área exclusiva da equipe da SC Transporte Executivo.")
             return redirect("dashboard")
         return view(request, *args, **kwargs)
     return wrapped
@@ -108,7 +108,7 @@ def master_required(view):
             if request.user.is_platform_staff:
                 messages.error(request, "Somente o admin master cadastra empresas, entregadores, veículos e acessos internos.")
                 return redirect("platform_home")
-            messages.error(request, "Área exclusiva da administração da Camboriú Delivery.")
+            messages.error(request, "Área exclusiva da administração da SC Transporte Executivo.")
             return redirect("dashboard")
         return view(request, *args, **kwargs)
     return wrapped

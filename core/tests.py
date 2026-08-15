@@ -307,10 +307,14 @@ class VercelDeployTests(TestCase):
             "VERCEL_PROJECT_PRODUCTION_URL": "camboriu-delivery.vercel.app",
         }
         hosts = extra_hosts(env)
+        self.assertIn("www.sc.transporteexecutivo.com", hosts)
+        self.assertIn("sc.transporteexecutivo.com", hosts)
         self.assertIn("camboriu-delivery-abc.vercel.app", hosts)
         self.assertIn("camboriu-delivery.vercel.app", hosts)
         self.assertIn(".vercel.app", hosts)
         origens = extra_origins(env)
+        self.assertIn("https://www.sc.transporteexecutivo.com", origens)
+        self.assertIn("https://sc.transporteexecutivo.com", origens)
         self.assertIn("https://camboriu-delivery.vercel.app", origens)
         self.assertIn("https://*.vercel.app", origens)
         self.assertIn(".vercel.app", merge_unique(["localhost"], hosts))

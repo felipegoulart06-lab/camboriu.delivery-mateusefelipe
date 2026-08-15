@@ -140,7 +140,7 @@ def integration_pdf():
     """Manual completo para entregar à empresa e ao entregador na integração."""
     buffer = BytesIO()
     doc = SimpleDocTemplate(
-        buffer, pagesize=A4, title=TITLE, author="Camboriú Delivery",
+        buffer, pagesize=A4, title=TITLE, author="SC Transporte Executivo",
         leftMargin=18 * mm, rightMargin=18 * mm, topMargin=18 * mm, bottomMargin=16 * mm,
     )
     story = [

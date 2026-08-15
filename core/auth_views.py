@@ -91,7 +91,7 @@ class PanelAuthenticationForm(AuthenticationForm):
         company = user.company
         if company and not company.is_active and not user.is_superuser:
             raise ValidationError(
-                "O acesso desta empresa está suspenso. Fale com a central da Camboriú Delivery.",
+                "O acesso desta empresa está suspenso. Fale com a central da SC Transporte Executivo.",
                 code="company_inactive",
             )
 

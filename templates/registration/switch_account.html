@@ -5,13 +5,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="Cache-Control" content="no-store">
-  <title>Trocar conta · Camboriú Delivery</title>
+  <title>Trocar conta · SC Transporte Executivo</title>
   <link rel="icon" href="{% static 'img/favicon.svg' %}">
+  {% include "partials/fonts.html" %}
   <link rel="stylesheet" href="{% static 'css/panel.css' %}">
 </head>
 <body class="login-page">
 <main class="login-card">
-  <a class="logo dark" href="{% url 'landing' %}">Camboriú Delivery</a>
+  <a class="logo dark" href="{% url 'landing' %}">{% include "partials/brand.html" %}</a>
   <p class="eyebrow">SESSÃO ATIVA</p>
   <h1>Você já está logado.</h1>
   <p>Neste navegador só cabe <strong>uma conta por vez</strong>. Agora é <strong>{{ user.get_full_name|default:user.username }}</strong> ({{ user.get_role_display }}).</p>

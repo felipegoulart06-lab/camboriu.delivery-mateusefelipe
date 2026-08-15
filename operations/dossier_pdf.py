@@ -132,7 +132,7 @@ def _photos(story, hold, items):
 def _closing(story):
     story.append(Spacer(1, 10))
     story.append(Paragraph(
-        "Dossiê gerado pelo sistema Camboriú Delivery para arquivo da operação. "
+        "Dossiê gerado pelo sistema SC Transporte Executivo para arquivo da operação. "
         "Anexos em PDF continuam disponíveis nas telas de cadastro; as fotos enviadas "
         "entram neste documento.",
         STYLES["muted"],

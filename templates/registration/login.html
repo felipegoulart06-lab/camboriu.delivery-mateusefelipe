@@ -5,13 +5,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="Cache-Control" content="no-store">
-  <title>Entrar · Camboriú Delivery</title>
+  <title>Entrar · SC Transporte Executivo</title>
   <link rel="icon" href="{% static 'img/favicon.svg' %}">
+  {% include "partials/fonts.html" %}
   <link rel="stylesheet" href="{% static 'css/panel.css' %}">
 </head>
 <body class="login-page">
 <main class="login-card">
-  <a class="logo dark" href="{% url 'landing' %}">Camboriú Delivery</a>
+  <a class="logo dark" href="{% url 'landing' %}">{% include "partials/brand.html" %}</a>
   <p class="eyebrow">ACESSO AO ERP</p>
   {% if selected_profile %}
   <h1>Entrar como {{ selected_profile.label }}.</h1>
@@ -50,7 +51,7 @@
   </div>
   {% else %}
   <div class="login-hints">
-    <p>Esqueceu a senha? Fale com a central da Camboriú Delivery para receber um novo acesso.</p>
+    <p>Esqueceu a senha? Fale com a central da SC Transporte Executivo para receber um novo acesso.</p>
   </div>
   {% endif %}
 </main>

@@ -85,7 +85,7 @@ class Company(models.Model):
     is_active = models.BooleanField("ativa", default=True)
     is_platform = models.BooleanField(
         "transportadora da plataforma", default=False,
-        help_text="Marque somente para a Camboriú Delivery. A frota e os entregadores pertencem a ela.",
+        help_text="Marque somente para a SC Transporte Executivo. A frota e os entregadores pertencem a ela.",
     )
     created_at = models.DateTimeField("criada em", auto_now_add=True)
 
@@ -193,7 +193,7 @@ class User(AbstractUser):
 
     @property
     def is_platform_staff(self):
-        """Equipe da Camboriú Delivery: vê as solicitações de todas as empresas."""
+        """Equipe da SC Transporte Executivo: vê as solicitações de todas as empresas."""
         return self.is_superuser or self.role in self.PLATFORM_ROLES
 
     @property

@@ -464,9 +464,9 @@ class Delivery(TenantModel):
     def clean(self):
         errors = {}
         if self.driver_id and not self._belongs_to_operation(self.driver):
-            errors["driver"] = "O motorista deve ser da sua empresa ou da frota da Camboriú Delivery."
+            errors["driver"] = "O motorista deve ser da sua empresa ou da frota da SC Transporte Executivo."
         if self.vehicle_id and not self._belongs_to_operation(self.vehicle):
-            errors["vehicle"] = "O veículo deve ser da sua empresa ou da frota da Camboriú Delivery."
+            errors["vehicle"] = "O veículo deve ser da sua empresa ou da frota da SC Transporte Executivo."
         if self.deadline and self.pickup_window and self.deadline < self.pickup_window:
             errors["deadline"] = "O prazo não pode ser anterior à coleta."
         if errors:
