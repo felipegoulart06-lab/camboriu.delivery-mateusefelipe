@@ -28,6 +28,7 @@ SOLICITACOES = "solicitacoes"
 RECURSOS = "recursos"
 PLATAFORMA = "plataforma"
 MASTER = "master"
+AO_VIVO = "ao_vivo"
 ENTREGADOR = "entregador"
 SO_POST = "so_post"
 
@@ -100,6 +101,8 @@ def esperado(acesso, ator):
         if ator == "entregador":
             return ok()
         return vai_para("platform_home") if ator in EQUIPE else vai_para("dashboard")
+    if acesso == AO_VIVO:
+        return ok()
     raise AssertionError(f"Perfil de acesso desconhecido: {acesso}")
 
 
@@ -149,27 +152,34 @@ ROTAS = (
     Rota("logout", SO_POST),
     Rota("switch_account", SO_POST),
     Rota("dashboard", AUTENTICADO),
+    Rota("live_alerts", AO_VIVO),
 
     # Painel da empresa contratante
     Rota("company_profile", CADASTRO_EMPRESA),
+    Rota("company_own_dossier", CADASTRO_EMPRESA),
     Rota("company_own_document", CADASTRO_EMPRESA, ["address_proof"],
          excecoes={"empresa_sem_cadastro": erro(404)}),
     Rota("delivery_list", PAINEL_EMPRESA),
-    Rota("delivery_create", SOLICITACOES),
+    Rota("delivery_create", SOLICITACOES, excecoes={
+        "master": vai_para("platform_delivery_create"),
+        "central": vai_para("platform_delivery_create"),
+    }),
     Rota("delivery_detail", PAINEL_EMPRESA, [entrega]),
     Rota("delivery_edit", SOLICITACOES, [entrega]),
     Rota("delivery_tracking", PAINEL_EMPRESA, [corrida_transito]),
     Rota("delivery_tracking_data", PAINEL_EMPRESA, [corrida_transito]),
     Rota("delivery_checklist", PAINEL_EMPRESA, [corrida_transito]),
     Rota("checklist_photo", PAINEL_EMPRESA, [corrida_transito, foto]),
-    Rota("driver_list", PAINEL_EMPRESA),
-    Rota("driver_create", RECURSOS),
-    Rota("driver_edit", RECURSOS, [motorista_a]),
-    Rota("driver_document", RECURSOS, [motorista_a, "cnh_front"]),
-    Rota("vehicle_list", PAINEL_EMPRESA),
-    Rota("vehicle_create", RECURSOS),
-    Rota("vehicle_edit", RECURSOS, [veiculo_a]),
-    Rota("vehicle_document", RECURSOS, [veiculo_a, "crlv_document"]),
+    Rota("driver_list", PLATAFORMA),
+    Rota("driver_create", MASTER),
+    Rota("driver_edit", MASTER, [motorista_a]),
+    Rota("driver_document", PLATAFORMA, [motorista_a, "cnh_front"]),
+    Rota("driver_dossier", PLATAFORMA, [motorista_a]),
+    Rota("vehicle_list", PLATAFORMA),
+    Rota("vehicle_create", MASTER),
+    Rota("vehicle_edit", MASTER, [veiculo_a]),
+    Rota("vehicle_document", PLATAFORMA, [veiculo_a, "crlv_document"]),
+    Rota("vehicle_dossier", PLATAFORMA, [veiculo_a]),
 
     # Financeiro visto pela empresa
     Rota("company_billing", PAINEL_EMPRESA, excecoes=SEM_EMPRESA),
@@ -179,19 +189,23 @@ ROTAS = (
          excecoes={**SEM_EMPRESA, "empresa_sem_cadastro": vai_para("company_profile")}),
     Rota("company_invoice_document", PAINEL_EMPRESA, [fatura],
          excecoes={**SEM_EMPRESA, "empresa_sem_cadastro": vai_para("company_profile")}),
-    Rota("company_delivery_document", PAINEL_EMPRESA, [entrega]),
+    Rota("company_delivery_document", PAINEL_EMPRESA, [corrida_transito]),
+    Rota("company_notifications", PAINEL_EMPRESA),
+    Rota("company_notifications_read", PAINEL_EMPRESA, post_only=True),
 
     # Central de despacho
     Rota("platform_home", PLATAFORMA),
     Rota("dispatch_board", PLATAFORMA),
     Rota("platform_deliveries", PLATAFORMA),
+    Rota("platform_delivery_create", PLATAFORMA),
     Rota("dispatch_detail", PLATAFORMA, [entrega]),
     Rota("dispatch_delivery", PLATAFORMA, [entrega]),
     Rota("dispatch_confirm", PLATAFORMA, [entrega], post_only=True),
     Rota("dispatch_cancel", PLATAFORMA, [entrega], post_only=True),
     Rota("platform_drivers", PLATAFORMA),
-    Rota("platform_driver_create", PLATAFORMA),
-    Rota("platform_driver_edit", PLATAFORMA, [motorista_plataforma]),
+    Rota("platform_driver_create", MASTER),
+    Rota("platform_driver_edit", MASTER, [motorista_plataforma]),
+    Rota("platform_driver_dossier", PLATAFORMA, [motorista_plataforma]),
     Rota("platform_integration", PLATAFORMA),
     Rota("platform_integration_pdf", PLATAFORMA),
 
@@ -199,6 +213,7 @@ ROTAS = (
     Rota("company_list", MASTER),
     Rota("company_create", MASTER),
     Rota("company_detail", MASTER, [empresa_a]),
+    Rota("company_dossier", MASTER, [empresa_a]),
     Rota("company_edit", MASTER, [empresa_a]),
     Rota("company_toggle", MASTER, [empresa_a], post_only=True),
     Rota("company_document", MASTER, [empresa_a, "address_proof"]),
@@ -236,6 +251,7 @@ ROTAS = (
     Rota("driver_profile", ENTREGADOR),
     Rota("driver_availability", ENTREGADOR, post_only=True),
     Rota("driver_job_detail", ENTREGADOR, [corrida_coleta]),
+    Rota("driver_job_document", ENTREGADOR, [corrida_coleta]),
     Rota("driver_accept_job", ENTREGADOR, [corrida_coleta], post_only=True),
     Rota("driver_start_pickup", ENTREGADOR, [corrida_coleta], post_only=True),
     Rota("driver_checklist", ENTREGADOR, [corrida_coleta]),
@@ -302,6 +318,11 @@ class MatrizDeAcessoTests(TestCase):
         self.entrega_faturada = self._entrega("Faturada", status=Delivery.Status.DELIVERED, preco="45.00")
         self.corrida_coleta = self._entrega("Coleta", status=Delivery.Status.PICKUP)
         self.corrida_transito = self._entrega("Trânsito", status=Delivery.Status.IN_TRANSIT)
+        Delivery.objects.filter(pk__in=[self.corrida_coleta.pk, self.corrida_transito.pk, self.entrega_aberta.pk, self.entrega_faturada.pk]).update(
+            master_confirmed_at=agora,
+        )
+        self.corrida_coleta.refresh_from_db()
+        self.corrida_transito.refresh_from_db()
 
         self.fatura = Invoice.create_for(
             self.empresa_a, [self.entrega_faturada], timezone.localdate() + timedelta(days=10),

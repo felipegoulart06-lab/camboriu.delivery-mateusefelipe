@@ -66,13 +66,13 @@ python manage.py seed_demo --master-email master@suaempresa.com --admin-email ad
 
 - **Empresas** (`/plataforma/empresas/`): cadastro, edição, suspensão e reativação. Empresa suspensa não entra no painel nem pede retirada, mesmo com a senha correta.
 - **Acessos das empresas**: cria o login (o e-mail é o usuário), escolhe o papel e troca a senha quando o cliente esquece.
-- **Entregadores** (`/plataforma/entregadores/`): cadastro do entregador e do login do app na mesma tela. Entregador sem login não pode ser acionado.
+- **Entregadores** (`/plataforma/entregadores/`): a central consulta a frota; só o **admin master** cadastra o entregador e o login do app. Entregador sem login não pode ser acionado.
 - **Equipe interna** (`/plataforma/equipe/`): outros admin masters e operadores da central.
 - **Financeiro** (`/plataforma/financeiro/`): painel contábil, faturas, repasses e tabela de preços.
 - **Notificações** (`/plataforma/financeiro/notificacoes/`): cada solicitação, faturamento e cadastro concluído, com os dados da empresa de origem.
 - **Integração** (`/plataforma/integracao/`): manual operacional das entregas de alto padrão (cadastro, pedido, acionamento, as 12 fotos do checklist, destinos, incidentes e financeiro). O mesmo texto baixa em PDF em `/plataforma/integracao/manual.pdf` para apresentar à empresa e ao entregador.
 
-Entregadores e veículos da operação ficam na empresa marcada como **transportadora da plataforma** (`is_platform`), criada pelo `bootstrap` (ou pelo `seed_demo`, em desenvolvimento). Só existe uma por banco. Uma empresa cliente também pode ter frota própria, e nesse caso a entrega aceita motorista dos dois lados.
+Entregadores e veículos da operação ficam na empresa marcada como **transportadora da plataforma** (`is_platform`), criada pelo `bootstrap` (ou pelo `seed_demo`, em desenvolvimento). Só existe uma por banco. **Somente o admin master** cadastra entregadores e veículos; a empresa contratante e o próprio entregador não veem essas telas.
 
 ## Cadastro da empresa
 
@@ -91,6 +91,7 @@ O cadastro é a primeira coisa que a empresa faz. Em `/app/configuracoes/` o for
 - Cadastro em CPF não precisa de contrato social nem de documento do responsável.
 - Enquanto `registered_at` estiver vazio, `dashboard`, entregas e financeiro redirecionam para o cadastro.
 - Ao concluir, o admin master recebe uma notificação com o documento e o endereço.
+- O dossiê cadastral completo baixa em PDF nas configurações da empresa (`/app/configuracoes/dossie.pdf`) e na ficha da plataforma (`/plataforma/empresas/<id>/dossie.pdf`), com todos os dados e as fotos anexadas.
 - Esses dados vão automaticamente no cabeçalho da notificação de cada solicitação, do PDF da solicitação e da fatura.
 - **CNPJ e MEI faturam em boleto**; cadastros em **CPF** pagam por entrega (recibo em Pix ou dinheiro).
 
@@ -98,7 +99,7 @@ O admin master cria a empresa em `/plataforma/empresas/nova/` com os mesmos camp
 
 ## Cadastro do entregador
 
-`/plataforma/entregadores/novo/` cria a ficha e o login do app na mesma tela, também em blocos: dados pessoais (nome, CPF, nascimento, RG e órgão emissor, nome da mãe), acesso ao app, contato e contato de emergência, endereço completo, habilitação e vínculo com a forma de repasse.
+Somente o **admin master** cadastra. `/plataforma/entregadores/novo/` cria a ficha e o login do app na mesma tela, também em blocos: dados pessoais (nome, CPF, nascimento, RG e órgão emissor, nome da mãe), acesso ao app, contato e contato de emergência, endereço completo, habilitação e vínculo com a forma de repasse. O dossiê completo baixa em PDF na lista e na ficha (`/plataforma/entregadores/<id>/dossie.pdf`).
 
 - CPF conferido por dígito verificador; nascimento precisa indicar 18 anos ou mais.
 - CNH: número, categoria, registro, UF, emissão, primeira habilitação, vencimento e **EAR**. Sem a observação EAR o cadastro não passa, porque é o que autoriza transportar carga de terceiros.
@@ -108,7 +109,7 @@ O admin master cria a empresa em `/plataforma/empresas/nova/` com os mesmos camp
 
 ## Cadastro de veículo
 
-`/app/veiculos/novo/` usa a mesma ficha para **moto, carro e utilitário**, cobrando de cada tipo o que faz sentido:
+Somente o **admin master** cadastra. `/app/veiculos/novo/` usa a mesma ficha para **moto, carro e utilitário**, cobrando de cada tipo o que faz sentido. O dossiê completo baixa em PDF na lista e na ficha (`/app/veiculos/<id>/dossie.pdf`).
 
 | Bloco | Campos |
 | --- | --- |
@@ -183,6 +184,8 @@ $env:CSRF_TRUSTED_ORIGINS="https://camboriudelivery.com.br,https://app.camboriud
 $env:MEDIA_ROOT="D:\camboriu\media"
 ```
 
+Em desenvolvimento os anexos podem ficar em `MEDIA_ROOT`. Em produção (Vercel) eles vão para o **R2 da Cloudflare**: crie um bucket privado, um token S3 com leitura e escrita, e cadastre `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` e `R2_BUCKET_NAME`. O download nunca usa URL pública do bucket — só as views autenticadas.
+
 SQLite é o padrão apenas em desenvolvimento — com `DEBUG=False` e sem banco configurado o projeto se recusa a subir. Para PostgreSQL fora do Supabase seguem valendo `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST` e `POSTGRES_PORT`.
 
 ## Banco no Supabase
@@ -228,7 +231,7 @@ Isso apaga empresas, entregadores, frota, entregas e todos os logins, e recria s
 O Django sobe como função serverless em São Paulo (`gru1`), no mesmo continente do Supabase. A Vercel detecta o `manage.py` e usa `config/wsgi.py`. Arquivos: `vercel.json`, `.python-version` (3.12) e `config/wsgi.py`.
 
 1. Publique o repositório no GitHub e importe o projeto em [vercel.com/new](https://vercel.com/new). Framework: **Django** (ou deixe a detecção automática).
-2. Em **Settings → Environment Variables**, cadastre pelo menos `SECRET_KEY` e `DATABASE_URL`. No **runtime** elas são obrigatórias; no **build** o Django aceita ficar sem elas (a Vercel lê o `manage.py` antes de injetar segredo de runtime). Marque as duas como disponíveis em Production e Preview:
+2. Em **Settings → Environment Variables**, cadastre pelo menos `SECRET_KEY`, `DATABASE_URL` e as chaves do R2. No **runtime** elas são obrigatórias; no **build** o Django aceita ficar sem elas (a Vercel lê o `manage.py` antes de injetar segredo de runtime). Marque como disponíveis em Production e Preview:
 
 | Variável | Valor |
 | --- | --- |
@@ -239,24 +242,24 @@ O Django sobe como função serverless em São Paulo (`gru1`), no mesmo continen
 | `PGSSLMODE` | `require` |
 | `ALLOWED_HOSTS` | `.vercel.app` e, depois, o domínio próprio |
 | `CSRF_TRUSTED_ORIGINS` | `https://*.vercel.app` e `https://seudominio.com` |
-| `SUPABASE_S3_ACCESS_KEY` | Project Settings → Storage → S3 access keys |
-| `SUPABASE_S3_SECRET_KEY` | a chave secreta do par S3 |
-| `AWS_STORAGE_BUCKET_NAME` | `media` |
-| `SUPABASE_PROJECT_REF` | `qnfhfgqnvhhhkiobxpff` |
+| `R2_ACCOUNT_ID` | Cloudflare → R2 → Account ID (barra lateral) |
+| `R2_ACCESS_KEY_ID` | token da API S3 do R2 (Object Read & Write) |
+| `R2_SECRET_ACCESS_KEY` | o segredo desse token |
+| `R2_BUCKET_NAME` | nome do bucket privado (ex.: `camboriu-media`) |
 
 A Vercel injeta `VERCEL`, `VERCEL_URL` e `VERCEL_PROJECT_PRODUCTION_URL`. O Django acrescenta esses hosts sozinho e, na Vercel, troca a porta 5432 do pooler pela 6543 (modo transação) e desliga conexão persistente.
 
-3. Deploy. O `collectstatic` e a inspeção do `manage.py` rodam no build sem Postgres. No request, sem `SECRET_KEY` e `DATABASE_URL` a aplicação não sobe.
+3. Deploy. O `collectstatic` e a inspeção do `manage.py` rodam no build sem Postgres. No request, sem `SECRET_KEY`, `DATABASE_URL` ou R2 a aplicação não sobe.
 4. Domínio próprio: Settings → Domains, depois some o host em `ALLOWED_HOSTS` e a origem `https://...` em `CSRF_TRUSTED_ORIGINS`.
 
-A Vercel **não guarda arquivo em disco**. Fotos do checklist, CNH e contrato social vão para o bucket privado `media` do Supabase Storage. Sem as chaves S3 o login funciona, mas o upload some no request seguinte. O download continua passando pelas views autenticadas — o bucket não é público.
+A Vercel **não guarda arquivo em disco**. Fotos do checklist, CNH e contrato social vão para um **bucket privado no R2 da Cloudflare**. Sem as chaves do R2 a função responde 503. O download continua passando pelas views autenticadas — o bucket não é público.
 
 O plano Hobby limita a função a 10 segundos; checklist com 12 fotos pede o plano Pro (`maxDuration` 60 em `vercel.json`). HTTPS já vem na Vercel, então a geolocalização do entregador funciona.
 
 ## Segurança e permissões
 
 - Todo acesso operacional das views é filtrado pela empresa do usuário; superusuários e a equipe da plataforma são globais.
-- `viewer` consulta; `operator` gerencia entregas; `admin` e `owner` gerenciam entregas, motoristas, veículos, o cadastro da empresa e o faturamento; `dispatcher` despacha e lê o financeiro; `master` também cadastra empresas, acessos, tabela de preços, boletos e repasses; `driver` só vê as corridas dele.
+- `viewer` consulta; `operator` gerencia entregas; `admin` e `owner` gerenciam entregas, o cadastro da empresa e o faturamento; `dispatcher` despacha e lê o financeiro; `master` cadastra empresas, entregadores, veículos, acessos, tabela de preços, boletos e repasses; `driver` só vê as corridas dele e baixa o PDF da solicitação **sem** valor do produto nem preço da entrega.
 - Faturas e PDFs são filtrados pela empresa: uma empresa não abre a fatura nem a solicitação de outra.
 - Senhas criadas pelo painel passam pelos validadores do Django (mínimo de 10 caracteres, senha comum, só números, semelhança com o usuário) e são guardadas com **Argon2** quando a biblioteca está instalada.
 - **Tentativas de login** são contadas por conta e por origem: passando de `LOGIN_ATTEMPT_LIMIT` (8) dentro de `LOGIN_ATTEMPT_WINDOW_SECONDS` (15 min), o login responde 429 até a janela virar. Acerto zera o contador. Com mais de um processo web, configure `REDIS_URL` para o contador ser compartilhado.

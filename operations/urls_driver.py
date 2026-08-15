@@ -9,6 +9,7 @@ urlpatterns = [
     path("perfil/", views.profile, name="driver_profile"),
     path("perfil/disponibilidade/", views.set_availability, name="driver_availability"),
     path("corridas/<int:pk>/", views.job_detail, name="driver_job_detail"),
+    path("corridas/<int:pk>/pdf/", views.job_document, name="driver_job_document"),
     path("corridas/<int:pk>/aceitar/", views.accept_job, name="driver_accept_job"),
     path("corridas/<int:pk>/sair-para-coleta/", views.start_pickup, name="driver_start_pickup"),
     path("corridas/<int:pk>/checklist/", views.checklist, name="driver_checklist"),

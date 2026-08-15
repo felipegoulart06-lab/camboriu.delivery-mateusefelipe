@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<div class="page-head"><div><p class="eyebrow">CADASTRO</p><h1>{{ title }}</h1><p>Preencha os campos obrigatórios para continuar. Os anexos ficam guardados com acesso restrito.</p></div></div>
+<div class="page-head">
+  <div><p class="eyebrow">CADASTRO</p><h1>{{ title }}</h1><p>Preencha os campos obrigatórios para continuar. Os anexos ficam guardados com acesso restrito.</p></div>
+  {% if dossier_url %}<a class="button" href="{{ dossier_url }}">Baixar dossiê</a>{% endif %}
+</div>
 <form class="card form-card" method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
   {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
   {% if form.errors %}<div class="message error">Alguns campos precisam de atenção. Veja os avisos em vermelho abaixo.</div>{% endif %}

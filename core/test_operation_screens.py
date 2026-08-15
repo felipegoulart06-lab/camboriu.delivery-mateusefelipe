@@ -210,14 +210,15 @@ class TelasDaOperacaoTests(TestCase):
         self.assertContains(resposta, self.entregue.code)
         self.assertNotContains(resposta, self.pedida.code)
 
-    def test_empresa_ve_a_frota_da_camboriu_apenas_para_consulta(self):
+    def test_empresa_nao_acessa_cadastro_de_frota(self):
         self.client.force_login(self.dono_alfa)
-        motoristas = self.client.get(reverse("driver_list"))
-        self.assertTrue(motoristas.context["read_only_fleet"])
-        self.assertContains(motoristas, "Carlos Mendes")
-        veiculos = self.client.get(reverse("vehicle_list"))
-        self.assertTrue(veiculos.context["read_only_fleet"])
-        self.assertContains(veiculos, self.moto.plate)
+        painel = self.client.get(reverse("dashboard"))
+        self.assertNotContains(painel, reverse("driver_list"))
+        self.assertNotContains(painel, reverse("vehicle_list"))
+        self.assertRedirects(self.client.get(reverse("driver_list")), reverse("dashboard"))
+        self.assertRedirects(self.client.get(reverse("vehicle_list")), reverse("dashboard"))
+        self.assertRedirects(self.client.get(reverse("vehicle_create")), reverse("dashboard"))
+        self.assertRedirects(self.client.get(reverse("platform_driver_create")), reverse("dashboard"))
 
     def test_entregador_avisa_a_central_quando_sai_e_quando_volta(self):
         self.client.force_login(self.carlos.user)

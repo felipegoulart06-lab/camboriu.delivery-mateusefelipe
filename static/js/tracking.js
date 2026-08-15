@@ -8,7 +8,7 @@
   L.tileLayer(config.tileUrl, { attribution: config.attribution, maxZoom: 19 }).addTo(map);
 
   const field = (name) => document.querySelector(`[data-tracking="${name}"]`);
-  const trail = L.polyline([], { color: "#0f7866", weight: 4, opacity: 0.7 }).addTo(map);
+  const trail = L.polyline([], { color: "#2e2e2e", weight: 4, opacity: 0.7 }).addTo(map);
   const pin = (color) =>
     L.divIcon({ className: "map-pin", html: `<span style="--pin:${color}"></span>`, iconSize: [18, 18] });
 
@@ -34,7 +34,7 @@
 
     const anchors = [];
     if (!render.staticDone) {
-      const pickup = place(data.pickup, "#0f7866", "Coleta");
+      const pickup = place(data.pickup, "#2e2e2e", "Coleta");
       const destination = place(data.destination, "#a13b3b", "Entrega");
       if (pickup) anchors.push(pickup.getLatLng());
       if (destination) anchors.push(destination.getLatLng());
@@ -62,7 +62,7 @@
     if (driverMarker) {
       driverMarker.setLatLng(position);
     } else {
-      driverMarker = L.marker(position, { icon: pin("#13231e"), title: data.driver.name })
+      driverMarker = L.marker(position, { icon: pin("#1a1a1a"), title: data.driver.name })
         .addTo(map)
         .bindTooltip(`${data.driver.name}<br>${data.driver.vehicle || "veículo não informado"}`);
     }

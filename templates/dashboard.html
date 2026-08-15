@@ -11,15 +11,22 @@
 <div class="split">
 <section class="card"><div class="card-head"><h2>Últimas entregas</h2><a href="{% url 'delivery_list' %}">Ver todas</a></div>
   <div class="table-wrap"><table><thead><tr><th>Código</th><th>Solicitante</th><th>Status</th><th>Motorista</th></tr></thead><tbody>
-  {% for item in latest %}<tr><td><a href="{% url 'delivery_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td><td>{{ item.requester }}</td><td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td><td>{{ item.driver|default:"—" }}</td></tr>{% empty %}<tr><td colspan="4" class="empty">Nenhuma entrega cadastrada.</td></tr>{% endfor %}
+  {% for item in latest %}<tr><td><a href="{% url 'delivery_detail' item.pk %}"><strong>{{ item.code }}</strong></a></td><td>{{ item.requester }}</td><td><span class="badge {% if is_client_company %}{{ item.company_status_code }}{% else %}{{ item.status }}{% endif %}">{% if is_client_company %}{{ item.company_status_label }}{% else %}{{ item.get_status_display }}{% endif %}</span></td><td>{{ item.driver|default:"—" }}</td></tr>{% empty %}<tr><td colspan="4" class="empty">Nenhuma entrega cadastrada.</td></tr>{% endfor %}
   </tbody></table></div>
 </section>
 <aside class="card resources">
-  <h2>Recursos</h2>
+  <h2>{% if is_client_company %}Seus gastos{% else %}Recursos{% endif %}</h2>
+  {% if is_client_company %}
+  <div><strong>R$ {{ spent_month }}</strong><span>gasto neste mês · {{ month_count }} solicitação(ões)</span></div>
+  <div><strong>{{ delivered_month }}</strong><span>entregas concluídas no mês</span></div>
+  <div><strong>R$ {{ to_invoice }}</strong><span>entregas a faturar</span></div>
+  <div><strong>R$ {{ open_invoices }}</strong><span>faturas em aberto</span></div>
+  {% else %}
   <div><strong>{{ drivers }}</strong><span>motoristas ativos · {{ fleet_label }}</span></div>
   <div><strong>{{ vehicles }}</strong><span>veículos disponíveis · {{ fleet_label }}</span></div>
   <div><strong>R$ {{ to_invoice }}</strong><span>entregas a faturar</span></div>
   <div><strong>R$ {{ open_invoices }}</strong><span>faturas em aberto</span></div>
+  {% endif %}
   <div><a href="{% url 'company_billing' %}">Abrir o financeiro</a></div>
 </aside>
 </div>

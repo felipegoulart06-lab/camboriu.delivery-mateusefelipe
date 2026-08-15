@@ -367,6 +367,39 @@ class VercelDeployTests(TestCase):
             falhas_de_deploy(debug=False, testes=False, inspecao=False, chave="chave-real-longa", sqlite=False),
             [],
         )
+        self.assertEqual(
+            falhas_de_deploy(
+                debug=False, testes=False, inspecao=False, chave="chave-real-longa", sqlite=False,
+                storage_gaps=["R2_ACCESS_KEY_ID", "R2_ACCOUNT_ID"],
+            ),
+            ["R2_ACCESS_KEY_ID", "R2_ACCOUNT_ID"],
+        )
+
+    def test_r2_monta_o_endpoint_pelo_account_id(self):
+        from core.deploy import object_storage_from_env
+
+        config, gaps = object_storage_from_env({
+            "R2_ACCOUNT_ID": "abc123conta",
+            "R2_ACCESS_KEY_ID": "chave",
+            "R2_SECRET_ACCESS_KEY": "segredo",
+            "R2_BUCKET_NAME": "camboriu-media",
+        })
+        self.assertEqual(gaps, [])
+        self.assertEqual(config["endpoint_url"], "https://abc123conta.r2.cloudflarestorage.com")
+        self.assertEqual(config["bucket_name"], "camboriu-media")
+        self.assertEqual(config["region_name"], "auto")
+        self.assertFalse(config["querystring_auth"])
+        vazio, faltando = object_storage_from_env({})
+        self.assertIsNone(vazio)
+        self.assertIn("R2_ACCESS_KEY_ID", faltando)
+        self.assertIn("R2_ACCOUNT_ID", faltando)
+        legado, _ = object_storage_from_env({
+            "AWS_ACCESS_KEY_ID": "chave",
+            "AWS_SECRET_ACCESS_KEY": "segredo",
+            "AWS_STORAGE_BUCKET_NAME": "media",
+            "AWS_S3_ENDPOINT_URL": "https://abc123conta.r2.cloudflarestorage.com",
+        })
+        self.assertEqual(legado["endpoint_url"], "https://abc123conta.r2.cloudflarestorage.com")
 
     def test_deploy_incompleto_responde_503_em_vez_de_derrubar_a_funcao(self):
         with override_settings(FALHAS_DE_DEPLOY=["SECRET_KEY", "DATABASE_URL"]):

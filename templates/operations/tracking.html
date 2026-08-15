@@ -18,9 +18,13 @@
     <h2>Entregador a caminho</h2>
     <dl>
       <div><dt>Status</dt><dd><span class="badge {{ delivery.status }}" data-tracking="status">{{ delivery.get_status_display }}</span></dd></div>
+      {% if user.is_platform_staff %}
       <div><dt>Entregador</dt><dd data-tracking="driver">{{ delivery.driver.name|default:"—" }}</dd></div>
       <div><dt>Telefone</dt><dd>{{ delivery.driver.phone|default:"—" }}</dd></div>
       <div><dt>Veículo</dt><dd>{{ delivery.vehicle|default:"—" }}</dd></div>
+      {% else %}
+      {% include "partials/public_fleet.html" with show_phone=True %}
+      {% endif %}
       <div><dt>Posição de</dt><dd data-tracking="updated">aguardando sinal</dd></div>
     </dl>
     <p class="tracking-note" data-tracking="note">O mapa atualiza sozinho enquanto o entregador estiver em rota.</p>

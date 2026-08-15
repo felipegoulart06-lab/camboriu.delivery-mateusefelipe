@@ -13,14 +13,20 @@ class NotificationQuerySet(models.QuerySet):
 
 
 class Notification(models.Model):
-    """Avisos que chegam ao painel do admin master, sempre com a empresa de origem."""
+    """Avisos da operação: a central vê os pedidos novos; a empresa vê o andamento dos seus."""
 
     class Kind(models.TextChoices):
         DELIVERY_REQUEST = "request", "Nova solicitação de entrega"
         INVOICE_REQUEST = "invoice", "Pedido de faturamento"
         COMPANY_REGISTERED = "company", "Cadastro de empresa concluído"
+        DELIVERY_UPDATE = "update", "Atualização da entrega"
+
+    class Audience(models.TextChoices):
+        PLATFORM = "platform", "Central"
+        COMPANY = "company", "Empresa"
 
     kind = models.CharField("tipo", max_length=10, choices=Kind.choices)
+    audience = models.CharField("destinatário", max_length=10, choices=Audience.choices, default=Audience.PLATFORM)
     company = models.ForeignKey(
         Company, verbose_name="empresa de origem", on_delete=models.CASCADE,
         related_name="notifications", null=True, blank=True,
@@ -37,7 +43,10 @@ class Notification(models.Model):
         verbose_name = "notificação"
         verbose_name_plural = "notificações"
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["read_at", "-created_at"])]
+        indexes = [
+            models.Index(fields=["read_at", "-created_at"]),
+            models.Index(fields=["audience", "read_at", "-created_at"], name="aviso_por_destinatario"),
+        ]
 
     def __str__(self):
         return self.title
@@ -47,5 +56,8 @@ class Notification(models.Model):
         return self.read_at is None
 
     @classmethod
-    def announce(cls, kind, title, company=None, body="", url=""):
-        return cls.objects.create(kind=kind, title=title, company=company, body=body, url=url)
+    def announce(cls, kind, title, company=None, body="", url="", audience=None):
+        return cls.objects.create(
+            kind=kind, title=title, company=company, body=body, url=url,
+            audience=audience or cls.Audience.PLATFORM,
+        )

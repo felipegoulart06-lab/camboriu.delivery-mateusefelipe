@@ -10,7 +10,8 @@
       {% if company.can_invoice %}<span class="badge accepted">Fatura em boleto</span>{% endif %}</p>
   </div>
   <div class="head-actions">
-    <a class="button" href="{% url 'company_user_create' company.pk %}">+ Novo acesso</a>
+    <a class="button" href="{% url 'company_dossier' company.pk %}">Baixar dossiê</a>
+    <a class="button secondary" href="{% url 'company_user_create' company.pk %}">+ Novo acesso</a>
     <a class="button secondary" href="{% url 'company_edit' company.pk %}">Editar dados</a>
     <a class="button secondary" href="{% url 'company_list' %}">Voltar</a>
   </div>

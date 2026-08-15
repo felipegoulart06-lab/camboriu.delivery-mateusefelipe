@@ -1,14 +1,41 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from finance.models import Invoice, money
 from operations.models import Delivery, Driver, Vehicle
-from operations.permissions import registration_pending
+from operations.permissions import company_panel_required, registration_pending
+
+from .alerts import inbox_for
 
 
 def landing(request):
     return render(request, "landing.html")
+
+
+@login_required
+def live_alerts(request):
+    """Alimenta o sino e o número do menu sem recarregar a página."""
+    inbox = inbox_for(request.user)
+    after = 0
+    try:
+        after = int(request.GET.get("after") or 0)
+    except (TypeError, ValueError):
+        after = 0
+    latest = list(inbox.filter(pk__gt=after).order_by("pk").values("id", "title", "url", "kind")[:8])
+    payload = {
+        "unread": inbox.unread().count(),
+        "latest_id": inbox.order_by("-pk").values_list("pk", flat=True).first() or 0,
+        "items": latest,
+        "incoming": 0,
+    }
+    if request.user.is_platform_staff:
+        payload["incoming"] = Delivery.objects.filter(status=Delivery.Status.REQUESTED).count()
+    return JsonResponse(payload)
 
 
 @login_required
@@ -39,6 +66,8 @@ def dashboard(request):
         fleet_label = "frota Camboriú Delivery"
 
     by_status = dict(deliveries.values_list("status").annotate(total=Count("id")))
+    month_start = timezone.localdate().replace(day=1)
+    this_month = deliveries.filter(created_at__date__gte=month_start)
     context = {
         "total": deliveries.count(),
         "in_progress": sum(by_status.get(status, 0) for status in Delivery.ACTIVE_STATUSES),
@@ -47,6 +76,12 @@ def dashboard(request):
         "drivers": drivers.filter(status=Driver.Status.ACTIVE).count(),
         "vehicles": vehicles.filter(status=Vehicle.Status.AVAILABLE).count(),
         "fleet_label": fleet_label,
+        "is_client_company": bool(company and not company.is_platform and not request.user.is_superuser),
+        "spent_month": money(this_month.aggregate(total=Sum("price"))["total"] or 0),
+        "month_count": this_month.count(),
+        "delivered_month": deliveries.filter(
+            status=Delivery.Status.DELIVERED, delivered_at__date__gte=month_start,
+        ).count(),
         "latest": deliveries.select_related("driver")[:8],
         "tracking": deliveries.filter(status__in=Delivery.TRACKABLE_STATUSES).select_related("driver")[:5],
         "to_invoice": money(
@@ -59,3 +94,19 @@ def dashboard(request):
         ) if company else 0,
     }
     return render(request, "dashboard.html", context)
+
+
+@company_panel_required
+def company_notifications(request):
+    items = inbox_for(request.user).select_related("company")
+    if request.GET.get("filtro") == "nao-lidas":
+        items = items.unread()
+    return render(request, "operations/company_notifications.html", {"notifications": items[:100]})
+
+
+@company_panel_required
+@require_POST
+def company_notifications_read(request):
+    inbox_for(request.user).mark_all_read()
+    messages.success(request, "Notificações marcadas como lidas.")
+    return redirect("company_notifications")

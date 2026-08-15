@@ -106,7 +106,7 @@ def master_required(view):
             if request.user.is_driver:
                 return redirect("driver_home")
             if request.user.is_platform_staff:
-                messages.error(request, "Somente o admin master cadastra empresas e acessos internos.")
+                messages.error(request, "Somente o admin master cadastra empresas, entregadores, veículos e acessos internos.")
                 return redirect("platform_home")
             messages.error(request, "Área exclusiva da administração da Camboriú Delivery.")
             return redirect("dashboard")

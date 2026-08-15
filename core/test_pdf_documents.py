@@ -5,21 +5,34 @@ O texto vai para o ReportLab, que lê marcação. Endereço com "<" ou razão so
 """
 from datetime import timedelta
 from decimal import Decimal
+import shutil
+import tempfile
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Company, User
 from finance.models import Invoice
-from finance.pdf import delivery_request_pdf, invoice_pdf
+from finance.pdf import brl, delivery_request_pdf, delivery_request_rows, invoice_pdf
+from operations.dossier_pdf import company_dossier_pdf, driver_dossier_pdf, vehicle_dossier_pdf
 from operations.models import Delivery, DeliveryStop, Driver, Vehicle
 from operations.playbook_pdf import integration_pdf
+from operations.tests import fake_document, fake_photo
 
 TEXTO_HOSTIL = 'Rua <b> das Flores & Cia, 10 "fundos" <100>'
 
 
+MEDIA_FOR_TESTS = tempfile.mkdtemp(prefix="camboriu-pdf-")
+
+
+@override_settings(MEDIA_ROOT=MEDIA_FOR_TESTS)
 class DocumentosEmPdfTests(TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA_FOR_TESTS, ignore_errors=True)
+        super().tearDownClass()
+
     def setUp(self):
         agora = timezone.now()
         self.plataforma = Company.objects.create(
@@ -81,6 +94,53 @@ class DocumentosEmPdfTests(TestCase):
         self.assertEqual(entrega.destination_count, 10)
         self.conteudo(delivery_request_pdf(entrega))
 
+    def test_pdf_do_entregador_omite_valor_do_produto_e_da_entrega(self):
+        entrega = self.entrega(driver=self.entregador, declared_value=Decimal("1500.00"))
+        Delivery.objects.filter(pk=entrega.pk).update(price=Decimal("88.88"))
+        entrega.refresh_from_db()
+        rotulos_empresa = [label for bloco in delivery_request_rows(entrega) for label, _ in bloco]
+        rotulos_motorista = [label for bloco in delivery_request_rows(entrega, hide_values=True) for label, _ in bloco]
+        valores_motorista = [valor for bloco in delivery_request_rows(entrega, hide_values=True) for _, valor in bloco]
+        self.assertIn("Valor declarado", rotulos_empresa)
+        self.assertIn("Valor da entrega", rotulos_empresa)
+        self.assertNotIn("Valor declarado", rotulos_motorista)
+        self.assertNotIn("Valor da entrega", rotulos_motorista)
+        self.assertNotIn("Fatura", rotulos_motorista)
+        self.assertNotIn(brl(entrega.declared_value), valores_motorista)
+        self.assertNotIn(brl(entrega.price), valores_motorista)
+        self.conteudo(delivery_request_pdf(entrega, hide_values=True))
+
+    def test_pdf_da_empresa_mascara_cpf_e_omite_documentos_do_motorista(self):
+        self.entregador.cpf = "321.654.987-91"
+        self.entregador.cnh = "55544433322"
+        self.entregador.save()
+        self.veiculo.color = "Vermelho"
+        self.veiculo.crlv_expires_at = timezone.localdate() + timedelta(days=90)
+        self.veiculo.save()
+        entrega = self.entrega(driver=self.entregador, vehicle=self.veiculo)
+        texto = " ".join(valor for bloco in delivery_request_rows(entrega, public_fleet=True) for _, valor in bloco)
+        self.assertIn("321.6**.***-**", texto)
+        self.assertIn("Honda CG 160", texto)
+        self.assertIn("CDL1B34", texto)
+        self.assertIn("Vermelho", texto)
+        self.assertNotIn("321.654.987-91", texto)
+        self.assertNotIn("654.987", texto)
+        self.assertNotIn("55544433322", texto)
+        self.assertNotIn(self.entregador.cnh, texto)
+        plataforma = " ".join(valor for bloco in delivery_request_rows(entrega) for _, valor in bloco)
+        self.assertIn(self.entregador.name, plataforma)
+        self.assertNotIn("321.6**.***-**", plataforma)
+        self.conteudo(delivery_request_pdf(entrega, public_fleet=True))
+
+    def test_entregador_baixa_o_pdf_sem_valores(self):
+        entrega = self.entrega(driver=self.entregador, declared_value=Decimal("1500.00"))
+        Delivery.objects.filter(pk=entrega.pk).update(price=Decimal("88.88"))
+        self.client.force_login(self.entregador.user)
+        resposta = self.client.get(reverse("driver_job_document", args=[entrega.pk]))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta["Content-Type"], "application/pdf")
+        self.assertTrue(b"".join(resposta.streaming_content).startswith(b"%PDF"))
+
     def test_fatura_em_boleto_com_linha_digitavel_e_observacoes(self):
         entrega = self.entrega(driver=self.entregador, status=Delivery.Status.DELIVERED)
         Delivery.objects.filter(pk=entrega.pk).update(price=Decimal("30.00"))
@@ -128,3 +188,51 @@ class DocumentosEmPdfTests(TestCase):
                 self.assertEqual(resposta.status_code, 200)
                 self.assertEqual(resposta["Content-Type"], "application/pdf")
                 self.assertTrue(b"".join(resposta.streaming_content).startswith(b"%PDF"))
+
+    def test_dossie_de_empresa_entregador_e_veiculo_gera_pdf(self):
+        self.empresa.notes = TEXTO_HOSTIL
+        self.empresa.address_proof = fake_document("comprovante.pdf")
+        self.empresa.contact_document_file = fake_photo("rg.jpg")
+        self.empresa.save()
+        self.entregador.notes = TEXTO_HOSTIL
+        self.entregador.portrait = fake_photo("retrato.jpg")
+        self.entregador.cnh_front = fake_document("cnh.pdf")
+        self.entregador.save()
+        self.veiculo.notes = TEXTO_HOSTIL
+        self.veiculo.photo_front = fake_photo("frente.jpg")
+        self.veiculo.crlv_document = fake_document("crlv.pdf")
+        self.veiculo.save()
+
+        self.conteudo(company_dossier_pdf(self.empresa, users=[self.master], include_internal=True))
+        self.conteudo(company_dossier_pdf(self.empresa, include_internal=False))
+        self.conteudo(driver_dossier_pdf(self.entregador))
+        self.conteudo(vehicle_dossier_pdf(self.veiculo))
+
+    def test_dossies_baixam_pelas_telas_de_cadastro(self):
+        self.empresa.contact_document_file = fake_photo("rg.jpg")
+        self.empresa.save()
+        self.entregador.portrait = fake_photo("retrato.jpg")
+        self.entregador.save()
+        self.veiculo.photo_front = fake_photo("frente.jpg")
+        self.veiculo.save()
+        dono = User.objects.create_user(
+            "rita@silva.local", password="Acesso@2026", company=self.empresa, role=User.Role.OWNER,
+        )
+
+        self.client.force_login(self.master)
+        for nome, argumentos in (
+            ("company_dossier", [self.empresa.pk]),
+            ("platform_driver_dossier", [self.entregador.pk]),
+            ("vehicle_dossier", [self.veiculo.pk]),
+        ):
+            with self.subTest(documento=nome):
+                resposta = self.client.get(reverse(nome, args=argumentos))
+                self.assertEqual(resposta.status_code, 200)
+                self.assertEqual(resposta["Content-Type"], "application/pdf")
+                self.assertTrue(b"".join(resposta.streaming_content).startswith(b"%PDF"))
+
+        self.client.force_login(dono)
+        resposta = self.client.get(reverse("company_own_dossier"))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertTrue(b"".join(resposta.streaming_content).startswith(b"%PDF"))
+        self.assertRedirects(self.client.get(reverse("platform_driver_dossier", args=[self.entregador.pk])), reverse("dashboard"))

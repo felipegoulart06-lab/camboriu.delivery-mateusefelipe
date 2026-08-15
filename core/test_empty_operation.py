@@ -15,17 +15,17 @@ from core.defaults import MASTER_EMAIL
 from operations.models import Driver
 
 PAGINAS_DO_MASTER = (
-    "platform_home", "dispatch_board", "platform_deliveries", "company_list", "company_create",
+    "platform_home", "dispatch_board", "platform_deliveries", "platform_delivery_create", "company_list", "company_create",
     "platform_team", "platform_team_create", "platform_drivers", "platform_driver_create",
     "platform_integration", "finance_dashboard", "finance_pricing", "invoice_list",
-    "payout_list", "payout_create", "notification_list",
-    "delivery_list", "delivery_create", "driver_list", "driver_create",
+    "payout_list", "payout_create", "notification_list", "live_alerts",
+    "delivery_list", "driver_list", "driver_create",
     "vehicle_list", "vehicle_create",
 )
 
 PAGINAS_DA_EMPRESA = (
-    "dashboard", "delivery_list", "delivery_create", "driver_list", "vehicle_list",
-    "company_profile", "company_billing",
+    "dashboard", "delivery_list", "delivery_create",
+    "company_profile", "company_billing", "company_notifications", "live_alerts",
 )
 
 PAGINAS_DO_ENTREGADOR = ("driver_home", "driver_jobs", "driver_history", "driver_profile")

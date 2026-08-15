@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.forms import PasswordFieldsMixin
-from accounts.models import User
+from accounts.models import Company, User
 from core.forms import DocumentUploadMixin, SectionedFormMixin, mark_required
 from core.validators import clean_chassis, clean_cnpj, clean_cpf, clean_phone, clean_plate, clean_renavam, clean_zip_code
 
@@ -338,6 +338,8 @@ class DeliveryForm(CompanyModelForm):
     """Solicitação da empresa. Motorista, veículo e status ficam com a central de despacho."""
 
     DISPATCH_FIELDS = ("driver", "vehicle", "status", "proof", "receiver")
+    COORDINATE_FIELDS = ("pickup_lat", "pickup_lng", "delivery_lat", "delivery_lng")
+    COMPANY_HIDDEN = DISPATCH_FIELDS + COORDINATE_FIELDS
 
     class Meta:
         model = Delivery
@@ -361,12 +363,59 @@ class DeliveryForm(CompanyModelForm):
         else:
             for name in self.DISPATCH_FIELDS:
                 self.fields.pop(name, None)
-        for name in ("pickup_lat", "pickup_lng", "delivery_lat", "delivery_lng"):
-            self.fields[name].help_text = "Opcional. Melhora a precisão do mapa de rastreio."
+        for name in self.COORDINATE_FIELDS:
+            self.fields.pop(name, None)
         self.fields["pickup_window"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["deadline"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["delivery_address"].label = "1º destino · endereço"
         self.fields["delivery_contact"].label = "1º destino · contato"
+
+
+class PlatformDeliveryForm(SectionedFormMixin, forms.ModelForm):
+    """Pedido de retirada aberto pela central/admin master, em nome da empresa contratante."""
+
+    SECTIONS = (
+        ("Empresa", "A solicitação entra no painel desta empresa e na fila de despacho.",
+         ("company",)),
+        ("Pedido", "Tudo o que a central precisa para acionar a coleta.",
+         ("requester", "item_type", "priority", "declared_value", "confidential", "description")),
+        ("Coleta", "Onde o entregador busca o item.",
+         ("pickup_address", "pickup_contact", "pickup_window")),
+        ("1º destino", "Endereço principal da entrega. Destinos extras ficam abaixo.",
+         ("delivery_address", "delivery_contact", "deadline")),
+        ("Observações", "Instruções da operação, acesso, sigilo ou conferência.",
+         ("notes",)),
+    )
+
+    class Meta:
+        model = Delivery
+        fields = (
+            "company", "requester", "item_type", "description", "declared_value", "confidential",
+            "priority", "pickup_address", "pickup_contact", "pickup_window",
+            "delivery_address", "delivery_contact", "deadline", "notes",
+        )
+        widgets = {
+            "pickup_window": DateTimeInput(format="%Y-%m-%dT%H:%M"),
+            "deadline": DateTimeInput(format="%Y-%m-%dT%H:%M"),
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["company"].queryset = Company.objects.clients().filter(
+            is_active=True, registered_at__isnull=False,
+        ).order_by("name")
+        self.fields["company"].label = "Empresa contratante"
+        self.fields["company"].help_text = "O pedido aparece para esta empresa e cai na fila do despacho."
+        self.fields["delivery_address"].label = "1º destino · endereço"
+        self.fields["delivery_contact"].label = "1º destino · contato"
+        self.fields["pickup_window"].input_formats = ["%Y-%m-%dT%H:%M"]
+        self.fields["deadline"].input_formats = ["%Y-%m-%dT%H:%M"]
+        mark_required(self, (
+            "company", "requester", "item_type", "description", "pickup_address",
+            "pickup_contact", "delivery_address", "delivery_contact",
+        ))
 
 
 DeliveryStopFormSet = forms.inlineformset_factory(
@@ -409,6 +458,7 @@ class DispatchForm(forms.ModelForm):
         self.fields["driver"].queryset = Driver.objects.filter(fleet, status=Driver.Status.ACTIVE).select_related("company")
         self.fields["driver"].required = True
         self.fields["vehicle"].queryset = Vehicle.objects.filter(fleet).exclude(status=Vehicle.Status.INACTIVE)
+        self.fields["vehicle"].required = True
         self.fields["driver"].label = "Entregador acionado"
         self.fields["vehicle"].label = "Veículo"
 

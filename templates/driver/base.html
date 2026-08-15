@@ -3,7 +3,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#092e28">
+  <meta name="theme-color" content="#1a1a1a">
   <title>{% block title %}Corridas{% endblock %} · Entregador</title>
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +13,7 @@
 <body>
 <div class="shell">
   <aside class="sidebar" id="driver-menu">
-    <a class="logo" href="{% url 'driver_home' %}"><span></span>Camboriú Delivery</a>
+    <a class="logo" href="{% url 'driver_home' %}">Camboriú Delivery</a>
     <p class="scope">Entregador</p>
     <p class="state {% if request.driver.status == 'active' %}on{% endif %}">{% if request.driver.status == 'active' %}Disponível{% else %}{{ request.driver.get_status_display }}{% endif %}</p>
     <nav>
@@ -38,7 +38,7 @@
       <button class="menu-toggle" type="button" aria-controls="driver-menu" aria-expanded="false" aria-label="Abrir menu">
         <span></span><span></span><span></span>
       </button>
-      <a class="logo" href="{% url 'driver_home' %}"><span></span>Camboriú Delivery</a>
+      <a class="logo" href="{% url 'driver_home' %}">Camboriú Delivery</a>
       <small class="state {% if request.driver.status == 'active' %}on{% endif %}">{% if request.driver.status == 'active' %}Disponível{% else %}{{ request.driver.get_status_display }}{% endif %}</small>
     </header>
     {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}

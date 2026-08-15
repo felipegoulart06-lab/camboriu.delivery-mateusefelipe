@@ -4,7 +4,7 @@
 <div class="page-head">
   <div><p class="eyebrow">DESPACHO</p><h1>{{ delivery.code }}</h1><p>{{ delivery.company.name }} · <span class="badge {{ delivery.status }}">{{ delivery.get_status_display }}</span></p></div>
   <div class="head-actions">
-    {% if delivery.status == 'requested' or delivery.status == 'dispatching' %}<a class="button" href="{% url 'dispatch_delivery' delivery.pk %}">{% if delivery.driver %}Trocar entregador{% else %}Acionar entregador{% endif %}</a>{% endif %}
+    {% if delivery.status != 'delivered' and delivery.status != 'canceled' %}<a class="button" href="{% url 'dispatch_delivery' delivery.pk %}">{% if delivery.driver %}Trocar entregador{% else %}Acionar entregador{% endif %}</a>{% endif %}
     {% if delivery.has_pickup_checklist %}<a class="button secondary" href="{% url 'delivery_checklist' delivery.pk %}">Termo de coleta</a>{% endif %}
     <a class="button secondary" href="{% url 'delivery_document' delivery.pk %}">PDF da solicitação</a>
     {% if not delivery.invoice_id %}<a class="button secondary" href="{% url 'delivery_price' delivery.pk %}">Ajustar valores</a>{% endif %}
@@ -25,8 +25,10 @@
       </dl>
       <div class="actions">
         {% if delivery.driver.whatsapp_url %}<a class="button" href="{{ delivery.driver.whatsapp_url }}" target="_blank" rel="noopener">Falar no WhatsApp agora</a>{% endif %}
-        {% if delivery.status == 'dispatching' %}
-        <form method="post" action="{% url 'dispatch_confirm' delivery.pk %}">{% csrf_token %}<button class="button secondary" type="submit">Confirmar aceite por telefone</button></form>
+        {% if delivery.driver and delivery.vehicle and not delivery.is_master_confirmed %}
+        <form method="post" action="{% url 'dispatch_confirm' delivery.pk %}">{% csrf_token %}<button class="button" type="submit">Confirmar pedido (entregador e veículo)</button></form>
+        {% elif delivery.is_master_confirmed %}
+        <p class="empty">Pedido confirmado para a empresa em {{ delivery.master_confirmed_at|date:"d/m/Y H:i" }}.</p>
         {% endif %}
       </div>
     {% else %}

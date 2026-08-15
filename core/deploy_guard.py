@@ -19,12 +19,14 @@ def pagina_de_deploy(falhas):
 </head>
 <body>
   <h1>Falta configurar a Vercel</h1>
-  <p>O site subiu, mas a função não tem as variáveis de produção. Em
-  <strong>Settings → Environment Variables</strong> cadastre:</p>
+  <p>O site subiu, mas a função não tem as variáveis de produção
+  (banco, chave secreta ou R2 da Cloudflare).</p>
+  <p><a href="https://vercel.com/felipe-goularts-projects/camboriu-delivery-mateusefelipe/settings/environment-variables">Abrir Environment Variables neste projeto</a></p>
+  <p>Cadastre:</p>
   <ul>{itens}</ul>
-  <p><code>SECRET_KEY</code> é a chave longa do <code>.env</code> local.
-  <code>DATABASE_URL</code> é a URI do pooler do Supabase na porta <strong>6543</strong>.</p>
-  <p>Marque Production e Preview, salve e faça um novo deploy.</p>
+  <p>Use o arquivo local <code>.env.vercel</code> (botão Import .env no painel).
+  Marque <strong>Production</strong> e <strong>Preview</strong>, salve, depois
+  <strong>Deployments → Redeploy</strong>.</p>
 </body>
 </html>
 """

@@ -210,7 +210,8 @@ class User(AbstractUser):
 
     @property
     def can_manage_resources(self):
-        return self.is_superuser or self.role in {self.Role.MASTER, self.Role.DISPATCHER, self.Role.OWNER, self.Role.ADMIN}
+        """Só o admin master cadastra entregadores e veículos."""
+        return self.is_master
 
     @property
     def can_manage_company_profile(self):

@@ -123,7 +123,7 @@ class RegrasDaOperacaoTests(TestCase):
     def test_aceite_so_e_confirmado_quando_o_entregador_foi_acionado(self):
         self.client.force_login(self.master)
         resposta = self.client.post(reverse("dispatch_confirm", args=[self.entrega.pk]))
-        self.assertRedirects(resposta, reverse("dispatch_detail", args=[self.entrega.pk]))
+        self.assertRedirects(resposta, reverse("dispatch_delivery", args=[self.entrega.pk]))
         self.entrega.refresh_from_db()
         self.assertEqual(self.entrega.status, Delivery.Status.REQUESTED)
 
@@ -131,6 +131,7 @@ class RegrasDaOperacaoTests(TestCase):
         self.client.post(reverse("dispatch_confirm", args=[self.entrega.pk]))
         self.entrega.refresh_from_db()
         self.assertEqual(self.entrega.status, Delivery.Status.ACCEPTED)
+        self.assertIsNotNone(self.entrega.master_confirmed_at)
 
     def test_entregador_de_outra_empresa_ou_afastado_nao_e_acionado(self):
         self.client.force_login(self.master)

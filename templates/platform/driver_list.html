@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head">
   <div><p class="eyebrow">FROTA CAMBORIÚ DELIVERY</p><h1>Entregadores</h1><p>Cada entregador recebe um login e vê no app dele só as corridas atribuídas.</p></div>
-  <a class="button" href="{% url 'platform_driver_create' %}">+ Novo entregador</a>
+  {% if user.can_manage_resources %}<a class="button" href="{% url 'platform_driver_create' %}">+ Novo entregador</a>{% endif %}
 </div>
 <form class="filters" method="get">
   <input type="search" name="q" value="{{ search }}" placeholder="Buscar por nome, CPF ou telefone">
@@ -28,7 +28,11 @@
       <td>{{ item.rides }}</td>
       <td>{{ item.last_position_at|date:"d/m H:i"|default:"—" }}</td>
       <td><span class="badge {% if item.status == 'active' %}delivered{% endif %}">{{ item.get_status_display }}</span></td>
-      <td><a href="{% url 'platform_driver_edit' item.pk %}">Editar</a>{% if item.user %}<br><a href="{% url 'user_password' item.user.pk %}">Senha</a>{% endif %}{% if item.whatsapp_url %}<br><a href="{{ item.whatsapp_url }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}</td>
+      <td>
+        <a href="{% url 'platform_driver_dossier' item.pk %}">Dossiê</a>
+        {% if user.can_manage_resources %}<br><a href="{% url 'platform_driver_edit' item.pk %}">Editar</a>{% if item.user %}<br><a href="{% url 'user_password' item.user.pk %}">Senha</a>{% endif %}{% endif %}
+        {% if item.whatsapp_url %}<br><a href="{{ item.whatsapp_url }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+      </td>
     </tr>
   {% empty %}<tr><td colspan="9" class="empty">Nenhum entregador cadastrado.</td></tr>{% endfor %}
   </tbody>

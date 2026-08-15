@@ -132,7 +132,57 @@ def database_url_for_vercel(url, env):
     return url
 
 
-def falhas_de_deploy(*, debug, testes, inspecao, chave, sqlite):
+def object_storage_from_env(env):
+    """Bucket privado no R2 da Cloudflare. Sem as chaves, o Django grava no disco local."""
+    access = env_value(env, "R2_ACCESS_KEY_ID") or env_value(env, "AWS_ACCESS_KEY_ID")
+    secret = env_value(env, "R2_SECRET_ACCESS_KEY") or env_value(env, "AWS_SECRET_ACCESS_KEY")
+    bucket = env_value(env, "R2_BUCKET_NAME") or env_value(env, "AWS_STORAGE_BUCKET_NAME", "media")
+    account = env_value(env, "R2_ACCOUNT_ID")
+    endpoint = env_value(env, "R2_ENDPOINT_URL") or env_value(env, "AWS_S3_ENDPOINT_URL")
+    if account and not endpoint:
+        endpoint = f"https://{account}.r2.cloudflarestorage.com"
+    gaps = []
+    if not access:
+        gaps.append("R2_ACCESS_KEY_ID")
+    if not secret:
+        gaps.append("R2_SECRET_ACCESS_KEY")
+    if not bucket:
+        gaps.append("R2_BUCKET_NAME")
+    if not endpoint:
+        gaps.append("R2_ACCOUNT_ID")
+    if gaps:
+        return None, gaps
+    return {
+        "access_key": access,
+        "secret_key": secret,
+        "bucket_name": bucket,
+        "endpoint_url": endpoint,
+        "region_name": env_value(env, "R2_REGION") or env_value(env, "AWS_S3_REGION_NAME", "auto"),
+        "default_acl": None,
+        "querystring_auth": False,
+        "file_overwrite": False,
+        "addressing_style": "path",
+        "signature_version": "s3v4",
+        "max_memory_size": 5 * 1024 * 1024,
+    }, []
+
+
+def r2_client_config():
+    """O SDK novo manda checksum CRC32; o R2 recusa. Pedimos checksum só quando o destino exige."""
+    from botocore.config import Config
+
+    try:
+        return Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path"},
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
+        )
+    except TypeError:
+        return Config(signature_version="s3v4", s3={"addressing_style": "path"})
+
+
+def falhas_de_deploy(*, debug, testes, inspecao, chave, sqlite, storage_gaps=()):
     """O que impede a operação de subir. No build isso fica vazio; no ar vira a página 503."""
     if debug or testes or inspecao:
         return []
@@ -141,4 +191,5 @@ def falhas_de_deploy(*, debug, testes, inspecao, chave, sqlite):
         falhas.append("SECRET_KEY")
     if sqlite:
         falhas.append("DATABASE_URL")
+    falhas.extend(storage_gaps)
     return falhas

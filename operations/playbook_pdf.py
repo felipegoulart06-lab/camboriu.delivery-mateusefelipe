@@ -11,11 +11,11 @@ from reportlab.platypus import KeepTogether, ListFlowable, ListItem, Paragraph, 
 
 from .playbook import AUDIENCE, SECTIONS, SUBTITLE, TITLE, VERSION
 
-INK = colors.HexColor("#13231e")
-TEAL = colors.HexColor("#0f7866")
-MUTED = colors.HexColor("#64736e")
-LINE = colors.HexColor("#dce5e1")
-MINT = colors.HexColor("#eef6f3")
+INK = colors.HexColor("#1c1c1c")
+TEAL = colors.HexColor("#2e2e2e")
+MUTED = colors.HexColor("#6a6a6a")
+LINE = colors.HexColor("#e2e2e2")
+MINT = colors.HexColor("#f2f2f2")
 PAGE = A4
 
 _BASE = getSampleStyleSheet()

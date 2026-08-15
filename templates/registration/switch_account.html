@@ -11,7 +11,7 @@
 </head>
 <body class="login-page">
 <main class="login-card">
-  <a class="logo dark" href="{% url 'landing' %}"><span></span>Camboriú Delivery</a>
+  <a class="logo dark" href="{% url 'landing' %}">Camboriú Delivery</a>
   <p class="eyebrow">SESSÃO ATIVA</p>
   <h1>Você já está logado.</h1>
   <p>Neste navegador só cabe <strong>uma conta por vez</strong>. Agora é <strong>{{ user.get_full_name|default:user.username }}</strong> ({{ user.get_role_display }}).</p>

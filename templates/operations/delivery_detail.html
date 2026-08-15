@@ -6,21 +6,25 @@
   <div class="head-actions">
     {% if delivery.is_trackable %}<a class="button" href="{% url 'delivery_tracking' delivery.pk %}">Acompanhar em tempo real</a>{% endif %}
     {% if delivery.has_pickup_checklist %}<a class="button secondary" href="{% url 'delivery_checklist' delivery.pk %}">Termo de coleta</a>{% endif %}
-    <a class="button secondary" href="{% url 'company_delivery_document' delivery.pk %}">PDF da solicitação</a>
+    {% if delivery.is_master_confirmed %}<a class="button secondary" href="{% url 'company_delivery_document' delivery.pk %}">PDF da solicitação</a>{% endif %}
     {% if user.can_manage_deliveries %}<a class="button secondary" href="{% url 'delivery_edit' delivery.pk %}">Editar</a>{% endif %}
   </div>
 </div>
 <div class="detail-grid">
 <section class="card detail"><h2>Operação</h2>
   <dl>
-    <div><dt>Status</dt><dd><span class="badge {{ delivery.status }}">{{ delivery.get_status_display }}</span></dd></div>
+    <div><dt>Status</dt><dd><span class="badge {% if user.is_platform_staff %}{{ delivery.status }}{% else %}{{ delivery.company_status_code }}{% endif %}">{% if user.is_platform_staff %}{{ delivery.get_status_display }}{% else %}{{ delivery.company_status_label }}{% endif %}</span></dd></div>
     <div><dt>Prioridade</dt><dd>{{ delivery.get_priority_display }}</dd></div>
     <div><dt>Item</dt><dd>{{ delivery.get_item_type_display }}{% if delivery.confidential %} · Sigiloso{% endif %}</dd></div>
     <div><dt>Valor declarado</dt><dd>R$ {{ delivery.declared_value }}</dd></div>
     <div><dt>Valor da entrega</dt><dd>R$ {{ delivery.price }} · {{ delivery.destination_count }} destino(s)</dd></div>
     <div><dt>Faturamento</dt><dd>{% if delivery.invoice %}<a href="{% url 'company_invoice_detail' delivery.invoice.pk %}">{{ delivery.invoice.number }}</a> · {{ delivery.invoice.get_status_display }}{% elif delivery.is_billable %}<a href="{% url 'company_billing' %}">aguardando faturamento</a>{% else %}—{% endif %}</dd></div>
+    {% if user.is_platform_staff %}
     <div><dt>Entregador</dt><dd>{{ delivery.driver|default:"Aguardando acionamento da central" }}</dd></div>
     <div><dt>Veículo</dt><dd>{{ delivery.vehicle|default:"—" }}</dd></div>
+    {% else %}
+    {% include "partials/public_fleet.html" %}
+    {% endif %}
     <div><dt>Aceita em</dt><dd>{{ delivery.accepted_at|date:"d/m/Y H:i"|default:"—" }}</dd></div>
     <div><dt>Coletada em</dt><dd>{{ delivery.picked_up_at|date:"d/m/Y H:i"|default:"—" }}</dd></div>
   </dl>

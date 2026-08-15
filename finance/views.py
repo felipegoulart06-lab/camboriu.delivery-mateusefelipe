@@ -8,8 +8,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import Company
+from core.alerts import inbox_for
 from core.confirm import require_confirmation
-from core.models import Notification
 from operations.models import Delivery, Driver
 from operations.permissions import master_required, platform_required
 
@@ -274,7 +274,7 @@ def payout_reopen(request, pk):
 
 @platform_required
 def notifications(request):
-    items = Notification.objects.select_related("company")
+    items = inbox_for(request.user).select_related("company")
     if request.GET.get("filtro") == "nao-lidas":
         items = items.unread()
     return render(request, "finance/notifications.html", {"notifications": items[:100]})
@@ -283,6 +283,6 @@ def notifications(request):
 @platform_required
 @require_POST
 def notifications_read(request):
-    Notification.objects.mark_all_read()
+    inbox_for(request.user).mark_all_read()
     messages.success(request, "Notificações marcadas como lidas.")
     return redirect("notification_list")

@@ -1,0 +1,24 @@
+{% comment %}Identidade operacional visível à empresa: nome, CPF mascarado, tempo na operação, veículo básico.{% endcomment %}
+{% if delivery.driver %}
+  <div>
+    <dt>Entregador</dt>
+    <dd>
+      {{ delivery.driver.name }} · CPF {{ delivery.driver.masked_cpf }}
+      <br><small>{{ delivery.driver.tenure_label }}</small>
+      {% if show_phone and delivery.driver.phone %}<br><small>{{ delivery.driver.phone }}</small>{% endif %}
+    </dd>
+  </div>
+{% else %}
+  <div><dt>Entregador</dt><dd>Aguardando acionamento da central</dd></div>
+{% endif %}
+{% if delivery.vehicle %}
+  <div>
+    <dt>Veículo</dt>
+    <dd>
+      {{ delivery.vehicle.public_label }}
+      <br><small>{{ delivery.vehicle.public_expiry_label }}</small>
+    </dd>
+  </div>
+{% else %}
+  <div><dt>Veículo</dt><dd>—</dd></div>
+{% endif %}

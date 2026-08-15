@@ -15,8 +15,12 @@
     <div><dt>{{ delivery.company.get_document_type_display }}</dt><dd>{{ delivery.company.document }}</dd></div>
     <div><dt>Entrega</dt><dd>{{ delivery.code }} · {{ delivery.get_item_type_display }}</dd></div>
     <div><dt>Valor declarado</dt><dd>R$ {{ delivery.declared_value }}</dd></div>
+    {% if user.is_platform_staff %}
     <div><dt>Entregador</dt><dd>{{ checklist.driver.name }} · CNH {{ checklist.driver.cnh }}</dd></div>
     <div><dt>Veículo</dt><dd>{{ delivery.vehicle|default:"—" }}</dd></div>
+    {% else %}
+    {% include "partials/public_fleet.html" %}
+    {% endif %}
     <div><dt>Coleta em</dt><dd>{{ checklist.submitted_at|date:"d/m/Y H:i" }}</dd></div>
     <div><dt>Endereço da coleta</dt><dd>{{ delivery.pickup_address }}</dd></div>
     <div><dt>Responsável que entregou</dt><dd>{{ checklist.handover_name }} · {{ checklist.handover_document }}</dd></div>

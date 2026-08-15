@@ -10,9 +10,10 @@ from core.models import Notification
 from core.uploads import serve as serve_document
 from finance.models import PricingPolicy
 
+from .dossier_pdf import driver_dossier_pdf, vehicle_dossier_pdf
 from .forms import DeliveryForm, DeliveryStopFormSet, DriverForm, VehicleForm, numbered_stops
 from .models import ChecklistPhoto, Delivery, Driver, DriverPing, Vehicle
-from .permissions import company_panel_required, role_required
+from .permissions import company_panel_required, master_required, platform_required, role_required
 
 TRAIL_LIMIT = 60
 
@@ -27,7 +28,7 @@ def tenant_queryset(request, model):
 
 
 def fleet_queryset(request, model):
-    """Frota: empresa cliente consulta a da plataforma; a central e a transportadora gerenciam a própria."""
+    """Frota da operação: só a equipe da plataforma consulta; o cadastro é do admin master."""
     if request.user.is_platform_staff or request.user.is_superuser:
         return model.objects.all()
     company = request.user.company
@@ -67,6 +68,8 @@ def delivery_detail(request, pk):
 
 @role_required()
 def delivery_create(request):
+    if request.user.is_platform_staff:
+        return redirect("platform_delivery_create")
     company = user_company(request)
     form = DeliveryForm(request.POST or None, company=company, dispatch=request.user.is_platform_staff)
     stops = DeliveryStopFormSet(request.POST or None, prefix="stops")
@@ -206,56 +209,76 @@ def _point(lat, lng, label):
     return {"lat": lat, "lng": lng, "label": label}
 
 
-@company_panel_required
+@platform_required
 def driver_list(request):
     drivers = fleet_queryset(request, Driver).select_related("company", "user")
     return render(request, "operations/driver_list.html", {
         "drivers": drivers,
-        "read_only_fleet": bool(request.user.company_id and not request.user.company.is_platform and not request.user.is_platform_staff),
+        "read_only_fleet": not request.user.can_manage_resources,
     })
 
 
-@role_required(resource=True)
+@master_required
 def driver_create(request):
     return _resource_form(request, DriverForm, "Novo motorista", "driver_list")
 
 
-@role_required(resource=True)
+@master_required
 def driver_edit(request, pk):
     driver = get_object_or_404(tenant_queryset(request, Driver), pk=pk)
     return _resource_form(request, DriverForm, f"Editar {driver.name}", "driver_list", driver)
 
 
-@company_panel_required
+@platform_required
 def vehicle_list(request):
     return render(request, "operations/vehicle_list.html", {
         "vehicles": fleet_queryset(request, Vehicle),
-        "read_only_fleet": bool(request.user.company_id and not request.user.company.is_platform and not request.user.is_platform_staff),
+        "read_only_fleet": not request.user.can_manage_resources,
     })
 
 
-@role_required(resource=True)
+@master_required
 def vehicle_create(request):
     return _resource_form(request, VehicleForm, "Novo veículo", "vehicle_list")
 
 
-@role_required(resource=True)
+@master_required
 def vehicle_edit(request, pk):
     vehicle = get_object_or_404(tenant_queryset(request, Vehicle), pk=pk)
     return _resource_form(request, VehicleForm, f"Editar {vehicle.plate}", "vehicle_list", vehicle)
 
 
-@role_required(resource=True)
+@platform_required
 def driver_document(request, pk, field):
     """CNH, comprovante de residência e afins só saem por aqui, com o acesso conferido."""
     driver = get_object_or_404(tenant_queryset(request, Driver), pk=pk)
     return serve_document(driver, field, Driver.DOCUMENTS)
 
 
-@role_required(resource=True)
+@platform_required
 def vehicle_document(request, pk, field):
     vehicle = get_object_or_404(tenant_queryset(request, Vehicle), pk=pk)
     return serve_document(vehicle, field, Vehicle.DOCUMENTS)
+
+
+@platform_required
+def driver_dossier(request, pk):
+    driver = get_object_or_404(tenant_queryset(request, Driver).select_related("user", "company"), pk=pk)
+    return FileResponse(
+        driver_dossier_pdf(driver),
+        content_type="application/pdf",
+        filename=f"dossie-entregador-{driver.pk}.pdf",
+    )
+
+
+@platform_required
+def vehicle_dossier(request, pk):
+    vehicle = get_object_or_404(tenant_queryset(request, Vehicle).select_related("company"), pk=pk)
+    return FileResponse(
+        vehicle_dossier_pdf(vehicle),
+        content_type="application/pdf",
+        filename=f"dossie-veiculo-{vehicle.plate}.pdf",
+    )
 
 
 def _resource_form(request, form_class, title, cancel_url, instance=None):
@@ -265,6 +288,13 @@ def _resource_form(request, form_class, title, cancel_url, instance=None):
     )
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Cadastro salvo com sucesso.")
+        messages.success(request, "Cadastro salvo. O dossiê em PDF já pode ser baixado.")
         return redirect(cancel_url)
-    return render(request, "operations/form.html", {"form": form, "title": title, "cancel_url": cancel_url})
+    context = {"form": form, "title": title, "cancel_url": cancel_url}
+    if instance is not None:
+        context["dossier_url"] = (
+            reverse("driver_dossier", args=[instance.pk])
+            if form_class is DriverForm
+            else reverse("vehicle_dossier", args=[instance.pk])
+        )
+    return render(request, "operations/form.html", context)

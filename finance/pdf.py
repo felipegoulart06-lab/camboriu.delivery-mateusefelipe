@@ -10,11 +10,11 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-INK = colors.HexColor("#13231e")
-TEAL = colors.HexColor("#0f7866")
-MUTED = colors.HexColor("#64736e")
-LINE = colors.HexColor("#dce5e1")
-MINT = colors.HexColor("#eef6f3")
+INK = colors.HexColor("#1c1c1c")
+TEAL = colors.HexColor("#2e2e2e")
+MUTED = colors.HexColor("#6a6a6a")
+LINE = colors.HexColor("#e2e2e2")
+MINT = colors.HexColor("#f2f2f2")
 
 _BASE = getSampleStyleSheet()
 STYLES = {
@@ -111,25 +111,65 @@ def _grid(header, rows, widths, aligns=None):
     return table
 
 
-def delivery_request_pdf(delivery):
-    """Solicitação de entrega com os dados cadastrais de quem pediu, para anexar ao contrato."""
+def delivery_request_rows(delivery, hide_values=False, public_fleet=False):
+    """Linhas do PDF da solicitação. hide_values tira valor do item, preço e fatura."""
+    item_facts = [
+        ("Solicitante", delivery.requester),
+        ("Aberta em", timezone.localtime(delivery.created_at).strftime("%d/%m/%Y %H:%M")),
+        ("Tipo de item", delivery.get_item_type_display()),
+        ("Prioridade", delivery.get_priority_display()),
+        ("Descrição", delivery.description),
+    ]
+    if not hide_values:
+        item_facts.append(("Valor declarado", brl(delivery.declared_value)))
+    item_facts.extend([
+        ("Sigiloso", "Sim" if delivery.confidential else "Não"),
+        ("Prazo", timezone.localtime(delivery.deadline).strftime("%d/%m/%Y %H:%M") if delivery.deadline else "—"),
+    ])
+    execucao = [
+        ("Entregador", _driver_label(delivery, public_fleet=public_fleet)),
+        ("Veículo", _vehicle_label(delivery, public_fleet=public_fleet)),
+    ]
+    if not hide_values:
+        execucao.extend([
+            ("Valor da entrega", brl(delivery.price)),
+            ("Fatura", delivery.invoice.number if delivery.invoice_id else "não faturada"),
+        ])
+    execucao.append(("Checklist antifraude", "enviado com 12 fotos" if delivery.has_pickup_checklist else "pendente"))
+    return item_facts, execucao
+
+
+def _driver_label(delivery, public_fleet=False):
+    if not delivery.driver_id:
+        return "aguardando acionamento"
+    driver = delivery.driver
+    if public_fleet:
+        return f"{driver.name} · CPF {driver.masked_cpf} · {driver.tenure_label}"
+    return driver.name
+
+
+def _vehicle_label(delivery, public_fleet=False):
+    if not delivery.vehicle_id:
+        return "—"
+    vehicle = delivery.vehicle
+    if public_fleet:
+        return f"{vehicle.public_label} · {vehicle.public_expiry_label}"
+    return str(vehicle)
+
+
+def delivery_request_pdf(delivery, hide_values=False, public_fleet=False):
+    """Solicitação de entrega. hide_values omite valor do item e preço da corrida (PDF do motorista)."""
     company = delivery.company
     buffer = BytesIO()
+    item_facts, execucao = delivery_request_rows(
+        delivery, hide_values=hide_values, public_fleet=public_fleet,
+    )
     story = [
         _company_header(company, "SOLICITAÇÃO DE ENTREGA"),
         Spacer(1, 8),
         Paragraph(f"<b>Solicitação {delivery.code}</b> · {delivery.get_status_display()}", STYLES["body"]),
         Spacer(1, 6),
-        _facts([
-            ("Solicitante", delivery.requester),
-            ("Aberta em", timezone.localtime(delivery.created_at).strftime("%d/%m/%Y %H:%M")),
-            ("Tipo de item", delivery.get_item_type_display()),
-            ("Prioridade", delivery.get_priority_display()),
-            ("Descrição", delivery.description),
-            ("Valor declarado", brl(delivery.declared_value)),
-            ("Sigiloso", "Sim" if delivery.confidential else "Não"),
-            ("Prazo", timezone.localtime(delivery.deadline).strftime("%d/%m/%Y %H:%M") if delivery.deadline else "—"),
-        ]),
+        _facts(item_facts),
         Paragraph("<b>Coleta</b>", STYLES["section"]),
         _facts([("Endereço", delivery.pickup_address), ("Contato", delivery.pickup_contact)]),
         Paragraph(f"<b>Destinos ({delivery.destination_count})</b>", STYLES["section"]),
@@ -140,14 +180,8 @@ def delivery_request_pdf(delivery):
         ),
     ]
 
-    story.append(Paragraph("<b>Execução e valores</b>", STYLES["section"]))
-    story.append(_facts([
-        ("Entregador", delivery.driver.name if delivery.driver_id else "aguardando acionamento"),
-        ("Veículo", str(delivery.vehicle) if delivery.vehicle_id else "—"),
-        ("Valor da entrega", brl(delivery.price)),
-        ("Fatura", delivery.invoice.number if delivery.invoice_id else "não faturada"),
-        ("Checklist antifraude", "enviado com 12 fotos" if delivery.has_pickup_checklist else "pendente"),
-    ]))
+    story.append(Paragraph("<b>Execução</b>" if hide_values else "<b>Execução e valores</b>", STYLES["section"]))
+    story.append(_facts(execucao))
     story.append(Spacer(1, 10))
     story.append(Paragraph(
         "Documento gerado pelo sistema Camboriú Delivery. Os dados cadastrais acima foram informados pela própria "

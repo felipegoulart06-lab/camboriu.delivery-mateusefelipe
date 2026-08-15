@@ -20,7 +20,7 @@ from django.core.exceptions import ImproperlyConfigured
 from core.deploy import (
     CHAVE_DESENVOLVIMENTO, debug_default, env_flag, env_float, env_int, env_value,
     extra_hosts, extra_origins, falhas_de_deploy, inspecao_de_build, merge_unique,
-    on_vercel, serverless_database,
+    object_storage_from_env, on_vercel, r2_client_config, serverless_database,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -200,12 +200,17 @@ else:
 if ON_VERCEL:
     DATABASES["default"] = serverless_database(DATABASES["default"], os.environ)
 
+OBJECT_STORAGE, OBJECT_STORAGE_GAPS = object_storage_from_env(os.environ)
+if RODANDO_TESTES:
+    OBJECT_STORAGE = None
+
 FALHAS_DE_DEPLOY = list(dict.fromkeys(FALHAS_DE_DEPLOY + falhas_de_deploy(
     debug=DEBUG,
     testes=RODANDO_TESTES,
     inspecao=COMANDO_SEM_BANCO,
     chave=SECRET_KEY,
     sqlite=DATABASES["default"]["ENGINE"].endswith("sqlite3"),
+    storage_gaps=OBJECT_STORAGE_GAPS if ON_VERCEL else (),
 )))
 if "SECRET_KEY" in FALHAS_DE_DEPLOY:
     # Django precisa de alguma chave só para o processo subir e mostrar o 503.
@@ -282,8 +287,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 WHITENOISE_MANIFEST_STRICT = False
 WHITENOISE_USE_FINDERS = DEBUG
 
-# Fotos do checklist antifraude. Em produção aponte MEDIA_ROOT para um volume com backup e acesso restrito.
-# Na Vercel o disco some a cada request: sem S3/Supabase Storage o arquivo não sobrevive.
+# Fotos do checklist, CNH e contratos. Em disco só no desenvolvimento; na Vercel o destino é o R2.
 MEDIA_URL = '/media/'
 MEDIA_ROOT = Path(env_value(os.environ, "MEDIA_ROOT", "/tmp/camboriu-media" if ON_VERCEL else str(BASE_DIR / "media")))
 FILE_UPLOAD_PERMISSIONS = 0o640
@@ -355,24 +359,16 @@ STORAGES = {
     },
 }
 
-# Supabase Storage (S3). Sem essas chaves a Vercel não consegue guardar foto de checklist.
-AWS_ACCESS_KEY_ID = env_value(os.environ, "AWS_ACCESS_KEY_ID", "") or env_value(os.environ, "SUPABASE_S3_ACCESS_KEY", "")
-AWS_SECRET_ACCESS_KEY = env_value(os.environ, "AWS_SECRET_ACCESS_KEY", "") or env_value(os.environ, "SUPABASE_S3_SECRET_KEY", "")
-AWS_STORAGE_BUCKET_NAME = env_value(os.environ, "AWS_STORAGE_BUCKET_NAME", "media")
-AWS_S3_REGION_NAME = env_value(os.environ, "AWS_S3_REGION_NAME", "sa-east-1")
-AWS_S3_ENDPOINT_URL = env_value(
-    os.environ,
-    "AWS_S3_ENDPOINT_URL",
-    f"https://{env_value(os.environ, 'SUPABASE_PROJECT_REF', 'qnfhfgqnvhhhkiobxpff')}.storage.supabase.co/storage/v1/s3",
-)
-AWS_S3_SIGNATURE_VERSION = "s3v4"
-AWS_S3_ADDRESSING_STYLE = "path"
-AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = None
-AWS_QUERYSTRING_AUTH = False
-AWS_S3_MAX_MEMORY_SIZE = 5 * 1024 * 1024
-if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
-    STORAGES["default"] = {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"}
+# R2 da Cloudflare (API S3). Bucket privado: o download continua pelas views autenticadas.
+if OBJECT_STORAGE:
+    os.environ.setdefault("AWS_REQUEST_CHECKSUM_CALCULATION", "WHEN_REQUIRED")
+    os.environ.setdefault("AWS_RESPONSE_CHECKSUM_VALIDATION", "WHEN_REQUIRED")
+    opcoes = dict(OBJECT_STORAGE)
+    opcoes["client_config"] = r2_client_config()
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": opcoes,
+    }
 
 LOG_LEVEL = env_value(os.environ, "LOG_LEVEL", "INFO").upper()
 LOGGING = {

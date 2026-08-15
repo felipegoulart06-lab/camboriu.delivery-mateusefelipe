@@ -150,6 +150,7 @@ class JornadaCompletaTests(TestCase):
         self.assertTrue(empresa.can_invoice)
         self.assertFalse(empresa.is_registered)
 
+        self.pdf("company_dossier", empresa.pk)
         self.client.post(reverse("company_edit", args=[empresa.pk]), empresa_payload(business_area="Panificação e confeitaria"))
         empresa.refresh_from_db()
         self.assertEqual(empresa.business_area, "Panificação e confeitaria")
@@ -186,6 +187,7 @@ class JornadaCompletaTests(TestCase):
         self.abrir("dashboard")
         self.abrir("company_billing")
         self.assertEqual(self.client.get(reverse("company_own_document", args=["address_proof"])).status_code, 200)
+        self.pdf("company_own_dossier")
         self.assertTrue(Notification.objects.filter(kind=Notification.Kind.COMPANY_REGISTERED, company=empresa).exists())
 
     def passo_5_master_monta_a_equipe_interna(self):
@@ -223,6 +225,7 @@ class JornadaCompletaTests(TestCase):
         self.assertEqual(entregador.company, self.plataforma)
         self.assertEqual(entregador.user.role, User.Role.DRIVER)
         self.assertFalse(entregador.missing_documents)
+        self.pdf("platform_driver_dossier", entregador.pk)
 
         moto = self.cadastrar_veiculo(Vehicle.Kind.MOTORCYCLE, "MOT1A23", top_case_liters=90, capacity_kg="30")
         carro = self.cadastrar_veiculo(Vehicle.Kind.CAR, "CAR2B34", doors=4)
@@ -243,7 +246,9 @@ class JornadaCompletaTests(TestCase):
                 payload.pop(campo, None)
         resposta = self.client.post(reverse("vehicle_create"), payload)
         self.assertRedirects(resposta, reverse("vehicle_list"), msg_prefix=f"veículo {tipo}")
-        return Vehicle.objects.get(plate=placa)
+        veiculo = Vehicle.objects.get(plate=placa)
+        self.pdf("vehicle_dossier", veiculo.pk)
+        return veiculo
 
     def passo_7_empresa_pede_a_retirada(self, empresa):
         self.entrar("rita@padaria.local", SENHA_EMPRESA, "dashboard")
@@ -252,9 +257,7 @@ class JornadaCompletaTests(TestCase):
             "requester": "Confeitaria Central", "item_type": Delivery.ItemType.OTHER,
             "description": "Bolo de três andares", "declared_value": "480.00", "confidential": "",
             "pickup_address": "Rua 1500, 200 · Centro", "pickup_contact": "Rita (47) 3300-1234",
-            "pickup_lat": "-26.9906", "pickup_lng": "-48.6349",
             "delivery_address": "Av. Atlântica, 3000", "delivery_contact": "Portaria",
-            "delivery_lat": "-26.9950", "delivery_lng": "-48.6300",
             "priority": Delivery.Priority.URGENT, "notes": "Levar com cuidado.",
             "stops-TOTAL_FORMS": "3", "stops-INITIAL_FORMS": "0",
             "stops-MIN_NUM_FORMS": "0", "stops-MAX_NUM_FORMS": "9",
@@ -298,6 +301,12 @@ class JornadaCompletaTests(TestCase):
         self.assertEqual(entrega.status, Delivery.Status.DISPATCHING)
         self.assertEqual((entrega.driver, entrega.vehicle), (entregador, moto))
         self.assertIsNotNone(entrega.dispatched_at)
+
+        confirmacao = self.client.post(reverse("dispatch_confirm", args=[entrega.pk]))
+        self.assertRedirects(confirmacao, reverse("dispatch_detail", args=[entrega.pk]))
+        entrega.refresh_from_db()
+        self.assertEqual(entrega.status, Delivery.Status.ACCEPTED)
+        self.assertIsNotNone(entrega.master_confirmed_at)
         self.pdf("delivery_document", entrega.pk)
 
     def passo_9_entregador_executa_a_corrida(self, entrega, entregador):
@@ -306,7 +315,11 @@ class JornadaCompletaTests(TestCase):
         self.assertContains(painel, entrega.code)
         self.abrir("driver_jobs")
         self.abrir("driver_profile")
-        self.abrir("driver_job_detail", entrega.pk)
+        detalhe = self.abrir("driver_job_detail", entrega.pk)
+        self.assertContains(detalhe, reverse("driver_job_document", args=[entrega.pk]))
+        self.assertNotContains(detalhe, "Valor declarado")
+        self.assertNotContains(detalhe, "repasse desta corrida")
+        self.pdf("driver_job_document", entrega.pk)
 
         self.client.post(reverse("driver_accept_job", args=[entrega.pk]))
         entrega.refresh_from_db()
@@ -347,7 +360,10 @@ class JornadaCompletaTests(TestCase):
     def passo_10_empresa_acompanha_e_baixa_os_documentos(self, entrega):
         self.entrar("rita@padaria.local", SENHA_EMPRESA, "dashboard")
         self.abrir("delivery_list")
-        self.abrir("delivery_detail", entrega.pk)
+        detalhe = self.abrir("delivery_detail", entrega.pk)
+        self.assertContains(detalhe, "Entregue")
+        self.assertContains(detalhe, reverse("company_delivery_document", args=[entrega.pk]))
+        self.abrir("company_notifications")
         self.abrir("delivery_tracking", entrega.pk)
         dados = self.client.get(reverse("delivery_tracking_data", args=[entrega.pk])).json()
         self.assertFalse(dados["trackable"], "entrega concluída não publica mais a posição")
@@ -355,6 +371,9 @@ class JornadaCompletaTests(TestCase):
 
         termo = self.abrir("delivery_checklist", entrega.pk)
         self.assertContains(termo, "LC-8842")
+        self.assertContains(termo, "321.6**.***-**")
+        self.assertNotContains(termo, "55544433322")
+        self.assertNotContains(termo, "321.654.987-91")
         foto = ChecklistPhoto.objects.filter(checklist__delivery=entrega).first()
         self.assertEqual(self.client.get(reverse("checklist_photo", args=[entrega.pk, foto.pk])).status_code, 200)
         self.pdf("company_delivery_document", entrega.pk)
@@ -408,13 +427,14 @@ class JornadaCompletaTests(TestCase):
         self.abrir("payout_list")
         self.abrir("notification_list")
         self.client.post(reverse("notifications_read"))
-        self.assertFalse(Notification.objects.unread().exists())
+        self.assertFalse(Notification.objects.filter(audience=Notification.Audience.PLATFORM).unread().exists())
 
     def passo_13_conferencia_final(self, empresa, entrega, fatura, entregador):
         painel = self.abrir("finance_dashboard")
         self.assertContains(painel, empresa.name)
         self.abrir("company_detail", empresa.pk)
         self.abrir("platform_deliveries")
+        self.abrir("platform_delivery_create")
         self.abrir("invoice_list")
 
         entrega.refresh_from_db()
@@ -427,6 +447,9 @@ class JornadaCompletaTests(TestCase):
         self.assertContains(historico, str(entrega.driver_payout_amount).replace(".", ","))
 
         self.entrar("rita@padaria.local", SENHA_EMPRESA, "dashboard")
+        visao = self.abrir("dashboard")
+        self.assertContains(visao, "Seus gastos")
+        self.assertNotContains(visao, "motoristas ativos")
         extrato = self.abrir("company_billing")
         self.assertContains(extrato, fatura.number)
 

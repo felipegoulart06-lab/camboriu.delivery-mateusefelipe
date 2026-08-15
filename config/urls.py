@@ -27,8 +27,12 @@ from core.auth_views import PanelLoginView, switch_account
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("", core_views.landing, name="landing"),
+    path("avisos/ao-vivo/", core_views.live_alerts, name="live_alerts"),
     path("app/", core_views.dashboard, name="dashboard"),
+    path("app/notificacoes/", core_views.company_notifications, name="company_notifications"),
+    path("app/notificacoes/lidas/", core_views.company_notifications_read, name="company_notifications_read"),
     path("app/configuracoes/", accounts_views.company_profile, name="company_profile"),
+    path("app/configuracoes/dossie.pdf", accounts_views.company_own_dossier, name="company_own_dossier"),
     path("app/configuracoes/documento/<str:field>/", accounts_views.company_own_document, name="company_own_document"),
     path("app/", include("operations.urls")),
     path("app/", include("finance.urls_company")),

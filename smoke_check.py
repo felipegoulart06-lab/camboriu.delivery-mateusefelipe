@@ -25,6 +25,9 @@ def primeiro(consulta):
 
 empresa = primeiro(Company.objects.clients().filter(registered_at__isnull=False))
 entrega = primeiro(Delivery.objects.filter(company=empresa)) if empresa else None
+entrega_confirmada = (
+    primeiro(Delivery.objects.filter(company=empresa, master_confirmed_at__isnull=False)) if empresa else None
+)
 entregador = primeiro(Driver.objects.filter(company__is_platform=True).exclude(user=None))
 corrida = primeiro(Delivery.objects.filter(driver=entregador)) if entregador else None
 veiculo = primeiro(Vehicle.objects.filter(company__is_platform=True))
@@ -36,36 +39,40 @@ usuario_da_empresa = primeiro(User.objects.filter(company=empresa)) if empresa e
 PAINEL_MASTER = [
     ("platform_home", []), ("dispatch_board", []), ("platform_deliveries", []),
     ("company_list", []), ("company_create", []),
-    ("company_detail", [empresa]), ("company_edit", [empresa]), ("company_user_create", [empresa]),
+    ("company_detail", [empresa]), ("company_dossier", [empresa]), ("company_edit", [empresa]), ("company_user_create", [empresa]),
     ("company_user_edit", [empresa, usuario_da_empresa]), ("user_password", [usuario_da_empresa]),
     ("platform_team", []), ("platform_team_create", []),
     ("platform_drivers", []), ("platform_driver_create", []), ("platform_driver_edit", [entregador]),
-    ("vehicle_list", []), ("vehicle_create", []), ("vehicle_edit", [veiculo]),
+    ("platform_driver_dossier", [entregador]),
+    ("vehicle_list", []), ("vehicle_create", []), ("vehicle_edit", [veiculo]), ("vehicle_dossier", [veiculo]),
     ("dispatch_detail", [entrega]), ("dispatch_delivery", [entrega]), ("delivery_document", [entrega]),
+    ("platform_delivery_create", []),
     ("finance_dashboard", []), ("finance_pricing", []), ("delivery_price", [entrega]),
     ("invoice_list", []), ("invoice_create", [empresa]),
     ("invoice_detail", [fatura]), ("invoice_bank_slip", [fatura]), ("invoice_document", [fatura]),
     ("payout_list", []), ("payout_create", []), ("payout_detail", [repasse]),
-    ("notification_list", []),
+    ("notification_list", []), ("live_alerts", []),
     ("platform_integration", []), ("platform_integration_pdf", []),
 ]
 # A central despacha, mas não cadastra empresas: /plataforma/empresas/ é só do admin master.
 PAINEL_CENTRAL = [
     ("platform_home", []), ("dispatch_board", []), ("platform_deliveries", []), ("platform_drivers", []),
+    ("platform_delivery_create", []),
+    ("platform_driver_dossier", [entregador]), ("vehicle_dossier", [veiculo]),
     ("dispatch_detail", [entrega]),
     ("finance_dashboard", []), ("invoice_list", []), ("payout_list", []), ("notification_list", []),
-    ("platform_integration", []),
+    ("live_alerts", []), ("platform_integration", []),
 ]
 PAINEL_EMPRESA = [
     ("dashboard", []), ("delivery_list", []), ("delivery_create", []),
-    ("delivery_detail", [entrega]), ("company_delivery_document", [entrega]),
-    ("company_profile", []), ("company_billing", []), ("company_invoice_request", []),
+    ("delivery_detail", [entrega]), ("company_delivery_document", [entrega_confirmada]),
+    ("company_notifications", []), ("live_alerts", []),
+    ("company_profile", []), ("company_own_dossier", []), ("company_billing", []), ("company_invoice_request", []),
     ("company_invoice_detail", [fatura]), ("company_invoice_document", [fatura]),
-    ("driver_list", []), ("vehicle_list", []),
 ]
 PAINEL_ENTREGADOR = [
     ("driver_home", []), ("driver_jobs", []), ("driver_history", []), ("driver_profile", []),
-    ("driver_job_detail", [corrida]),
+    ("driver_job_detail", [corrida]), ("driver_job_document", [corrida]),
 ]
 
 VARREDURAS = [

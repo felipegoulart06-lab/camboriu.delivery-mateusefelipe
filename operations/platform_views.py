@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -7,12 +8,14 @@ from django.views.decorators.http import require_POST
 
 from accounts.forms import CompanyForm, CompanyUserForm, PlatformUserForm, SetPasswordForm
 from accounts.models import Company, User
+from core.alerts import inbox_for, notify_company
 from core.confirm import require_confirmation
-from core.models import Notification
 from core.uploads import serve as serve_document
 from finance import reports
+from finance.models import PricingPolicy
 
-from .forms import DispatchForm, DriverAccountForm
+from .dossier_pdf import company_dossier_pdf, driver_dossier_pdf
+from .forms import DeliveryStopFormSet, DispatchForm, DriverAccountForm, PlatformDeliveryForm, numbered_stops
 from .models import Delivery, Driver, PickupChecklist
 from .permissions import master_required, platform_required
 from .playbook import AUDIENCE, SECTIONS, SUBTITLE, TITLE, VERSION
@@ -46,8 +49,8 @@ def home(request):
         "top_companies": Company.objects.clients().annotate(total=Count("delivery")).order_by("-total")[:5],
         "pending_registration": Company.objects.clients().filter(registered_at__isnull=True).count(),
         "finance": reports.headline(),
-        "notifications": Notification.objects.select_related("company")[:6],
-        "unread": Notification.objects.unread().count(),
+        "notifications": inbox_for(request.user).select_related("company")[:6],
+        "unread": inbox_for(request.user).unread().count(),
     }
     return render(request, "platform/home.html", context)
 
@@ -88,6 +91,35 @@ def deliveries(request):
 
 
 @platform_required
+def delivery_create(request):
+    """Pedido de retirada aberto pela central, já com todos os detalhes da entrega."""
+    from .views import _announce_request
+
+    form = PlatformDeliveryForm(request.POST or None)
+    stops = DeliveryStopFormSet(request.POST or None, prefix="stops")
+    if request.method == "POST" and form.is_valid() and stops.is_valid():
+        with transaction.atomic():
+            delivery = form.save()
+            numbered_stops(stops, delivery)
+            PricingPolicy.current().apply_to(delivery)
+            delivery.register_event(
+                f"Solicitação aberta pela central em nome de {delivery.company.name}",
+                request.user,
+            )
+            _announce_request(delivery, request.user)
+        messages.success(
+            request,
+            f"Solicitação {delivery.code} de {delivery.company.name} enviada para "
+            f"{delivery.destination_count} destino(s). Valor estimado: R$ {delivery.price}.",
+        )
+        return redirect("dispatch_detail", pk=delivery.pk)
+    return render(request, "platform/delivery_form.html", {
+        "form": form, "stops": stops, "title": "Nova retirada pela central",
+        "cancel_url": "dispatch_board", "policy": PricingPolicy.current(),
+    })
+
+
+@platform_required
 def dispatch(request, pk):
     """Aciona um entregador para a solicitação e libera o contato imediato."""
     delivery = get_object_or_404(Delivery.objects.select_related("company", "driver"), pk=pk)
@@ -100,7 +132,12 @@ def dispatch(request, pk):
         delivery.status = Delivery.Status.DISPATCHING
         delivery.save()
         delivery.register_event(f"Entregador {delivery.driver.name} acionado pela central", request.user)
-        messages.success(request, f"{delivery.driver.name} foi acionado. Confirme por telefone ou WhatsApp agora.")
+        notify_company(
+            delivery,
+            f"A central acionou um entregador para {delivery.code}",
+            f"{delivery.driver.name} com o veículo {delivery.vehicle}. A central ainda precisa confirmar o pedido.",
+        )
+        messages.success(request, f"{delivery.driver.name} foi acionado. Confirme entregador e veículo para aceitar o pedido.")
         return redirect("dispatch_detail", pk=delivery.pk)
     return render(request, "platform/dispatch.html", {"form": form, "delivery": delivery})
 
@@ -116,15 +153,36 @@ def dispatch_detail(request, pk):
 @platform_required
 @require_POST
 def confirm_acceptance(request, pk):
-    """A central confirma o aceite quando o entregador responde por telefone."""
+    """A central confirma entregador e veículo. Só então a empresa vê Pedido aceito e o PDF."""
     delivery = get_object_or_404(Delivery, pk=pk)
-    if delivery.status != Delivery.Status.DISPATCHING:
-        messages.error(request, "Só é possível confirmar aceite de corridas acionadas.")
+    if not delivery.driver_id or not delivery.vehicle_id:
+        messages.error(request, "Defina o entregador e o veículo antes de confirmar o pedido.")
+        return redirect("dispatch_delivery", pk=pk)
+    if delivery.status in Delivery.CLOSED_STATUSES:
+        messages.error(request, "Esta entrega já foi encerrada.")
         return redirect("dispatch_detail", pk=pk)
-    delivery.status = Delivery.Status.ACCEPTED
+    if delivery.status == Delivery.Status.REQUESTED:
+        messages.error(request, "Acione o entregador e o veículo antes de confirmar.")
+        return redirect("dispatch_delivery", pk=pk)
+    already = delivery.is_master_confirmed
+    if delivery.status in (Delivery.Status.DISPATCHING, Delivery.Status.ACCEPTED, Delivery.Status.APPROVED):
+        delivery.status = Delivery.Status.ACCEPTED
+    if not delivery.master_confirmed_at:
+        delivery.master_confirmed_at = timezone.now()
     delivery.save()
-    delivery.register_event(f"Aceite confirmado pela central com {delivery.driver.name}", request.user)
-    messages.success(request, "Aceite registrado. A empresa já vê o rastreio do entregador.")
+    if not already:
+        delivery.register_event(
+            f"Pedido confirmado pela central: {delivery.driver.name} · {delivery.vehicle}",
+            request.user,
+        )
+        notify_company(
+            delivery,
+            f"Pedido {delivery.code} aceito pela central",
+            f"Entregador {delivery.driver.name} · {delivery.vehicle.public_label}. O PDF da solicitação já está disponível.",
+        )
+        messages.success(request, "Pedido confirmado. A empresa já vê o aceite e pode baixar o PDF.")
+    else:
+        messages.info(request, "Este pedido já estava confirmado.")
     return redirect("dispatch_detail", pk=pk)
 
 
@@ -140,6 +198,7 @@ def cancel_delivery(request, pk):
     delivery.status = Delivery.Status.CANCELED
     delivery.save()
     delivery.register_event(f"Cancelada pela central: {reason or 'sem motivo informado'}", request.user)
+    notify_company(delivery, f"A solicitação {delivery.code} foi cancelada", reason or "A central cancelou a corrida.")
     messages.success(request, "Entrega cancelada.")
     return redirect("dispatch_board")
 
@@ -166,7 +225,7 @@ def company_create(request):
     form = CompanyForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
         company = form.save()
-        messages.success(request, f"{company.name} cadastrada. Agora crie o primeiro acesso dela.")
+        messages.success(request, f"{company.name} cadastrada. O dossiê em PDF já pode ser baixado na ficha. Agora crie o primeiro acesso dela.")
         return redirect("company_user_create", pk=company.pk)
     return render(request, "platform/company_form.html", {"form": form, "title": "Nova empresa contratante"})
 
@@ -177,7 +236,7 @@ def company_edit(request, pk):
     form = CompanyForm(request.POST or None, request.FILES or None, instance=company)
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Dados da empresa atualizados.")
+        messages.success(request, "Dados da empresa atualizados. O dossiê em PDF já pode ser baixado.")
         return redirect("company_detail", pk=company.pk)
     return render(request, "platform/company_form.html", {"form": form, "title": f"Editar {company.name}", "company": company})
 
@@ -194,6 +253,18 @@ def company_detail(request, pk):
         "latest": deliveries.select_related("driver").order_by("-created_at")[:8],
     }
     return render(request, "platform/company_detail.html", context)
+
+
+@master_required
+def company_dossier(request, pk):
+    """Dossiê completo da empresa contratante, com acessos e notas internas."""
+    company = get_object_or_404(Company.objects.clients(), pk=pk)
+    users = company.users.order_by("first_name", "username")
+    return FileResponse(
+        company_dossier_pdf(company, users=users, include_internal=True),
+        content_type="application/pdf",
+        filename=f"dossie-empresa-{company.slug}.pdf",
+    )
 
 
 @master_required
@@ -293,7 +364,7 @@ def drivers(request):
     return render(request, "platform/driver_list.html", {"drivers": queryset, "search": search})
 
 
-@platform_required
+@master_required
 def driver_create(request):
     company = platform_company()
     if company is None:
@@ -302,20 +373,34 @@ def driver_create(request):
     form = DriverAccountForm(request.POST or None, request.FILES or None, company=company)
     if request.method == "POST" and form.is_valid():
         driver = form.save()
-        messages.success(request, f"{driver.name} cadastrado com login {driver.user.email}.")
+        messages.success(request, f"{driver.name} cadastrado com login {driver.user.email}. O dossiê em PDF já pode ser baixado.")
         return redirect("platform_drivers")
     return render(request, "platform/driver_form.html", {"form": form, "title": "Novo entregador"})
 
 
-@platform_required
+@master_required
 def driver_edit(request, pk):
     driver = get_object_or_404(Driver.objects.filter(company__is_platform=True), pk=pk)
     form = DriverAccountForm(request.POST or None, request.FILES or None, instance=driver, company=driver.company)
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Cadastro do entregador atualizado.")
+        messages.success(request, "Cadastro do entregador atualizado. O dossiê em PDF já pode ser baixado.")
         return redirect("platform_drivers")
     return render(request, "platform/driver_form.html", {"form": form, "title": f"Editar {driver.name}", "driver": driver})
+
+
+@platform_required
+def driver_dossier(request, pk):
+    """Dossiê cadastral do entregador da frota da plataforma."""
+    driver = get_object_or_404(
+        Driver.objects.filter(company__is_platform=True).select_related("user", "company"),
+        pk=pk,
+    )
+    return FileResponse(
+        driver_dossier_pdf(driver),
+        content_type="application/pdf",
+        filename=f"dossie-entregador-{driver.pk}.pdf",
+    )
 
 
 @platform_required

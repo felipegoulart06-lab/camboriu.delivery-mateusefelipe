@@ -4,12 +4,15 @@ from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Q, Sum
-from django.http import HttpResponseNotAllowed, JsonResponse
+from django.http import FileResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from finance.models import DriverPayout, money
+from finance.pdf import delivery_request_pdf
+
+from core.alerts import notify_company
 
 from .forms import DeliveryCompletionForm, PickupChecklistForm
 from .models import ChecklistPhoto, Delivery, Driver, DriverPing, PickupChecklist
@@ -126,15 +129,37 @@ def job_detail(request, pk):
 
 
 @driver_required
+def job_document(request, pk):
+    """Mesma solicitação que a empresa baixa, sem valor do produto nem preço da entrega."""
+    delivery = get_object_or_404(
+        driver_deliveries(request).select_related("company", "driver", "vehicle", "invoice"),
+        pk=pk,
+    )
+    return FileResponse(
+        delivery_request_pdf(delivery, hide_values=True),
+        content_type="application/pdf",
+        filename=f"solicitacao-{delivery.code}.pdf",
+    )
+
+
+@driver_required
 @require_POST
 def accept_job(request, pk):
     delivery = get_object_or_404(driver_deliveries(request), pk=pk)
+    if delivery.status == Delivery.Status.ACCEPTED:
+        messages.info(request, "Esta corrida já está aceita.")
+        return redirect("driver_job_detail", pk=pk)
     if delivery.status != Delivery.Status.DISPATCHING:
         messages.error(request, "Esta corrida não está aguardando aceite.")
         return redirect("driver_job_detail", pk=pk)
     delivery.status = Delivery.Status.ACCEPTED
     delivery.save()
     delivery.register_event(f"Corrida aceita por {request.driver.name}", request.user)
+    notify_company(
+        delivery,
+        f"O entregador aceitou a corrida {delivery.code}",
+        "A central ainda precisa confirmar entregador e veículo para o pedido aparecer como aceito no seu painel.",
+    )
     messages.success(request, "Corrida aceita. A empresa já foi avisada no painel dela.")
     return redirect("driver_job_detail", pk=pk)
 
@@ -149,6 +174,7 @@ def start_pickup(request, pk):
     delivery.status = Delivery.Status.PICKUP
     delivery.save()
     delivery.register_event("Entregador a caminho da coleta", request.user)
+    notify_company(delivery, f"O entregador saiu para coletar {delivery.code}")
     messages.success(request, "Boa corrida. Mantenha o rastreio ligado até a entrega.")
     return redirect("driver_job_detail", pk=pk)
 
@@ -185,6 +211,7 @@ def checklist(request, pk):
             delivery.register_event(
                 f"Coleta conferida com checklist antifraude e {record.photos.count()} fotos", request.user,
             )
+            notify_company(delivery, f"{delivery.code} saiu para entrega", "A coleta foi conferida e o item está em trânsito.")
         messages.success(request, "Checklist enviado. Item liberado para transporte.")
         return redirect("driver_job_detail", pk=pk)
     return render(request, "driver/checklist_form.html", {"form": form, "delivery": delivery, "nav": "jobs"})
@@ -208,6 +235,7 @@ def complete_job(request, pk):
         delivery.status = Delivery.Status.DELIVERED
         delivery.save()
         delivery.register_event(f"Entregue para {delivery.receiver}", request.user)
+        notify_company(delivery, f"{delivery.code} foi entregue", f"Recebido por {delivery.receiver}.")
         messages.success(request, "Entrega concluída. Obrigado.")
         return redirect("driver_home")
     return render(request, "driver/complete_form.html", {"form": form, "delivery": delivery, "nav": "jobs"})

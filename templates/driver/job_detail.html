@@ -5,6 +5,7 @@
 <a class="back" href="{% url 'driver_jobs' %}">← Minhas corridas</a>
 <h1>{{ delivery.code }}</h1>
 <p class="sub">{{ delivery.company.name }} · <span class="badge {{ delivery.status }}">{{ delivery.get_status_display }}</span></p>
+<p><a class="button secondary" href="{% url 'driver_job_document' delivery.pk %}">PDF da solicitação</a></p>
 
 {% if tracking_on %}
   <div class="tracker" id="tracker"
@@ -38,8 +39,7 @@
   <h2>Item</h2>
   <p>{{ delivery.get_item_type_display }}{% if delivery.confidential %} · sigiloso{% endif %}</p>
   <p>{{ delivery.description }}</p>
-  <p><small>Valor declarado R$ {{ delivery.declared_value }} · prazo {{ delivery.deadline|date:"d/m H:i"|default:"livre" }}</small></p>
-  <p><small>Seu repasse desta corrida: <strong>R$ {{ delivery.driver_payout_amount }}</strong></small></p>
+  <p><small>Prazo {{ delivery.deadline|date:"d/m H:i"|default:"livre" }}</small></p>
 </section>
 
 <div class="stack">

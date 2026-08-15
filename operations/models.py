@@ -181,6 +181,39 @@ class Driver(TenantModel):
         self.last_lat, self.last_lng, self.last_position_at = lat, lng, timezone.now()
         self.save(update_fields=["last_lat", "last_lng", "last_position_at"])
 
+    @property
+    def masked_cpf(self):
+        """CPF visível para a empresa: 064.3**.***-**."""
+        digits = "".join(char for char in (self.cpf or "") if char.isdigit())
+        if len(digits) >= 11:
+            return f"{digits[:3]}.{digits[3]}**.***-**"
+        if len(digits) >= 4:
+            return f"{digits[:3]}.{digits[3]}**.***-**"
+        return "***.***.***-**"
+
+    @property
+    def tenure_label(self):
+        """Há quanto tempo o entregador está na operação, sem expor a ficha."""
+        start = timezone.localdate()
+        if self.created_at:
+            start = timezone.localtime(self.created_at).date()
+        days = max((timezone.localdate() - start).days, 0)
+        if days < 1:
+            return "desde hoje na operação"
+        if days == 1:
+            return "há 1 dia na operação"
+        if days < 30:
+            return f"há {days} dias na operação"
+        months = days // 30
+        if months == 1:
+            return "há 1 mês na operação"
+        if months < 12:
+            return f"há {months} meses na operação"
+        years = months // 12
+        if years == 1:
+            return "há 1 ano na operação"
+        return f"há {years} anos na operação"
+
 
 class Vehicle(TenantModel):
     class Kind(models.TextChoices):
@@ -299,6 +332,20 @@ class Vehicle(TenantModel):
             return None
         return round(self.cargo_length_cm * self.cargo_width_cm * self.cargo_height_cm / 1000)
 
+    @property
+    def public_label(self):
+        """O que a empresa pode ver: modelo, placa e cor."""
+        parts = [f"{self.brand} {self.model}".strip(), self.plate]
+        if self.color:
+            parts.append(self.color)
+        return " · ".join(parts)
+
+    @property
+    def public_expiry_label(self):
+        crlv = self.crlv_expires_at.strftime("%d/%m/%Y") if self.crlv_expires_at else "—"
+        insurance = self.insurance_expires_at.strftime("%d/%m/%Y") if self.insurance_expires_at else "—"
+        return f"Licenciamento {crlv} · Seguro {insurance}"
+
     def expiring(self, reference=None):
         """Documentos vencidos ou a vencer em 30 dias."""
         today = reference or timezone.localdate()
@@ -396,6 +443,7 @@ class Delivery(TenantModel):
     updated_at = models.DateTimeField("atualizada em", auto_now=True)
     dispatched_at = models.DateTimeField("acionada em", null=True, blank=True)
     accepted_at = models.DateTimeField("aceita em", null=True, blank=True)
+    master_confirmed_at = models.DateTimeField("confirmada pela central", null=True, blank=True)
     picked_up_at = models.DateTimeField("coletada em", null=True, blank=True)
     delivered_at = models.DateTimeField("entregue em", null=True, blank=True)
 
@@ -488,6 +536,30 @@ class Delivery(TenantModel):
     def is_billable(self):
         """Entregue e ainda sem fatura: pode entrar em um boleto."""
         return self.status == self.Status.DELIVERED and self.invoice_id is None and self.price > 0
+
+    @property
+    def is_master_confirmed(self):
+        """A empresa só vê pedido aceito e PDF depois que a central confirma entregador e veículo."""
+        return self.master_confirmed_at is not None
+
+    @property
+    def company_status_code(self):
+        if not self.is_master_confirmed and self.status in (
+            self.Status.REQUESTED, self.Status.DISPATCHING, self.Status.ACCEPTED, self.Status.APPROVED,
+        ):
+            return self.Status.REQUESTED if self.status == self.Status.REQUESTED else "pending_confirm"
+        return self.status
+
+    @property
+    def company_status_label(self):
+        if not self.is_master_confirmed:
+            if self.status == self.Status.REQUESTED:
+                return "Solicitada"
+            if self.status in (self.Status.DISPATCHING, self.Status.ACCEPTED, self.Status.APPROVED):
+                return "Aguardando confirmação da central"
+        if self.status == self.Status.ACCEPTED:
+            return "Pedido aceito"
+        return self.get_status_display()
 
     def register_event(self, description, user=None):
         return DeliveryEvent.objects.create(

@@ -124,11 +124,13 @@ class TenantSecurityTests(OperationsTestCase):
         self.assertRedirects(self.client.get(reverse("delivery_create")), reverse("dashboard"))
         self.assertRedirects(self.client.get(reverse("driver_create")), reverse("dashboard"))
 
-    def test_admin_can_create_resource_for_own_company(self):
+    def test_company_cannot_register_or_view_fleet(self):
         self.client.force_login(self.admin)
-        response = self.client.post(reverse("vehicle_create"), vehicle_payload())
-        self.assertRedirects(response, reverse("vehicle_list"))
-        self.assertTrue(Vehicle.objects.filter(company=self.a, plate="NEW1A23").exists())
+        self.assertRedirects(self.client.get(reverse("driver_list")), reverse("dashboard"))
+        self.assertRedirects(self.client.get(reverse("vehicle_list")), reverse("dashboard"))
+        self.assertRedirects(self.client.get(reverse("vehicle_create")), reverse("dashboard"))
+        self.assertRedirects(self.client.post(reverse("vehicle_create"), vehicle_payload()), reverse("dashboard"))
+        self.assertFalse(Vehicle.objects.filter(plate="NEW1A23").exists())
 
     def test_company_request_never_sets_driver_or_status(self):
         self.client.force_login(self.admin)
@@ -201,7 +203,10 @@ class VehicleRegistrationTests(OperationsTestCase):
         self.assertEqual(self.client.get(reverse("vehicle_document", args=[vehicle.pk, "photo_rear"])).status_code, 404)
 
         self.client.force_login(self.admin)
-        self.assertEqual(self.client.get(reverse("vehicle_document", args=[vehicle.pk, "crlv_document"])).status_code, 404)
+        self.assertRedirects(
+            self.client.get(reverse("vehicle_document", args=[vehicle.pk, "crlv_document"])),
+            reverse("dashboard"),
+        )
 
 
 class DriverRegistrationTests(OperationsTestCase):
@@ -266,13 +271,68 @@ class DispatchTests(OperationsTestCase):
         self.assertRedirects(response, reverse("dispatch_detail", args=[self.delivery.pk]))
         self.delivery.refresh_from_db()
         self.assertEqual(self.delivery.status, Delivery.Status.DISPATCHING)
-        self.assertEqual(self.delivery.driver, self.fleet_driver)
+        self.assertEqual((self.delivery.driver, self.delivery.vehicle), (self.fleet_driver, self.vehicle))
         self.assertIsNotNone(self.delivery.dispatched_at)
+        aviso = Notification.objects.filter(
+            kind=Notification.Kind.DELIVERY_UPDATE, audience=Notification.Audience.COMPANY, company=self.a,
+        ).latest("created_at")
+        self.assertIn(self.delivery.code, aviso.title)
+
+    def test_master_confirm_requires_driver_and_vehicle_then_releases_pdf(self):
+        self.client.force_login(self.dispatcher)
+        self.assertEqual(self.client.get(reverse("company_delivery_document", args=[self.delivery.pk])).status_code, 404)
+        self.client.post(reverse("dispatch_delivery", args=[self.delivery.pk]), {
+            "driver": self.fleet_driver.pk, "vehicle": self.vehicle.pk,
+        })
+        self.client.force_login(self.admin)
+        detalhe = self.client.get(reverse("delivery_detail", args=[self.delivery.pk]))
+        self.assertContains(detalhe, "Aguardando confirmação da central")
+        self.assertNotContains(detalhe, reverse("company_delivery_document", args=[self.delivery.pk]))
+        self.assertEqual(self.client.get(reverse("company_delivery_document", args=[self.delivery.pk])).status_code, 404)
+
+        self.client.force_login(self.dispatcher)
+        self.client.post(reverse("dispatch_confirm", args=[self.delivery.pk]))
+        self.delivery.refresh_from_db()
+        self.assertEqual(self.delivery.status, Delivery.Status.ACCEPTED)
+        self.assertIsNotNone(self.delivery.master_confirmed_at)
+
+        self.client.force_login(self.admin)
+        detalhe = self.client.get(reverse("delivery_detail", args=[self.delivery.pk]))
+        self.assertContains(detalhe, "Pedido aceito")
+        self.assertContains(detalhe, reverse("company_delivery_document", args=[self.delivery.pk]))
+        self.assertEqual(self.client.get(reverse("company_delivery_document", args=[self.delivery.pk])).status_code, 200)
+
+    def test_live_alerts_update_for_master_and_company(self):
+        self.client.force_login(self.master)
+        vazio = self.client.get(reverse("live_alerts")).json()
+        self.assertEqual(vazio["unread"], Notification.objects.filter(audience=Notification.Audience.PLATFORM).unread().count())
+        self.client.force_login(self.admin)
+        self.client.post(reverse("delivery_create"), {
+            "requester": "Farmácia", "item_type": "sample", "description": "Amostra", "declared_value": "10",
+            "pickup_address": "A", "pickup_contact": "A", "delivery_address": "B", "delivery_contact": "B",
+            "priority": "normal", **EMPTY_STOPS,
+        })
+        self.client.force_login(self.master)
+        avisos = self.client.get(reverse("live_alerts")).json()
+        self.assertGreaterEqual(avisos["unread"], 1)
+        self.assertGreaterEqual(avisos["incoming"], 1)
+        self.assertTrue(any("pediu" in item["title"] for item in avisos["items"]))
+
+        self.client.post(reverse("dispatch_delivery", args=[self.delivery.pk]), {
+            "driver": self.fleet_driver.pk, "vehicle": self.vehicle.pk,
+        })
+        self.client.force_login(self.admin)
+        da_empresa = self.client.get(reverse("live_alerts")).json()
+        self.assertGreaterEqual(da_empresa["unread"], 1)
+        self.assertEqual(da_empresa["incoming"], 0)
+        self.assertTrue(any("acionou" in item["title"] for item in da_empresa["items"]))
 
     def test_driver_without_login_cannot_be_dispatched(self):
         no_login = Driver.objects.create(company=self.platform, name="Sem acesso", cpf="77", cnh="77", cnh_category="A", phone="7", contract_type=Driver.Contract.PARTNER)
         self.client.force_login(self.dispatcher)
-        response = self.client.post(reverse("dispatch_delivery", args=[self.delivery.pk]), {"driver": no_login.pk})
+        response = self.client.post(reverse("dispatch_delivery", args=[self.delivery.pk]), {
+            "driver": no_login.pk, "vehicle": self.vehicle.pk,
+        })
         self.assertContains(response, "ainda não tem login")
         self.delivery.refresh_from_db()
         self.assertEqual(self.delivery.status, Delivery.Status.REQUESTED)
@@ -305,6 +365,108 @@ class DispatchTests(OperationsTestCase):
         self.client.force_login(root)
         response = self.client.get(reverse("admin:operations_delivery_delete", args=[self.delivery.pk]))
         self.assertEqual(response.status_code, 403)
+
+    def test_master_opens_a_pickup_request_for_a_client_company(self):
+        self.client.force_login(self.master)
+        self.assertRedirects(self.client.get(reverse("delivery_create")), reverse("platform_delivery_create"))
+        pagina = self.client.get(reverse("platform_delivery_create"))
+        self.assertEqual(pagina.status_code, 200)
+        self.assertContains(pagina, "Empresa contratante")
+        resposta = self.client.post(reverse("platform_delivery_create"), {
+            "company": self.a.pk, "requester": "Farmácia Central", "item_type": "sample",
+            "description": "Medicamento refrigerado", "declared_value": "90.00",
+            "pickup_address": "Av. Brasil, 100", "pickup_contact": "Balcão",
+            "delivery_address": "Rua 200, 10", "delivery_contact": "Enfermaria",
+            "priority": "critical", "notes": "Manter na caixa térmica.",
+            **EMPTY_STOPS,
+        })
+        criada = Delivery.objects.get(requester="Farmácia Central")
+        self.assertRedirects(resposta, reverse("dispatch_detail", args=[criada.pk]))
+        self.assertEqual(criada.company, self.a)
+        self.assertEqual(criada.status, Delivery.Status.REQUESTED)
+        self.assertIsNone(criada.driver)
+        self.assertEqual(criada.priority, Delivery.Priority.CRITICAL)
+        self.assertTrue(Notification.objects.filter(kind=Notification.Kind.DELIVERY_REQUEST, company=self.a).exists())
+
+    def test_pickup_forms_do_not_ask_for_coordinates(self):
+        self.client.force_login(self.admin)
+        empresa = self.client.get(reverse("delivery_create"))
+        self.assertEqual(empresa.status_code, 200)
+        self.assertNotContains(empresa, "latitude")
+        self.assertNotContains(empresa, "longitude")
+        self.client.force_login(self.master)
+        central = self.client.get(reverse("platform_delivery_create"))
+        self.assertEqual(central.status_code, 200)
+        self.assertNotContains(central, "latitude")
+        self.assertNotContains(central, "longitude")
+
+    def test_dispatcher_can_also_open_a_pickup_for_the_company(self):
+        self.client.force_login(self.dispatcher)
+        resposta = self.client.post(reverse("platform_delivery_create"), {
+            "company": self.b.pk, "requester": "Ligação telefônica", "item_type": "document",
+            "description": "Contrato", "declared_value": "0",
+            "pickup_address": "A", "pickup_contact": "A", "delivery_address": "B", "delivery_contact": "B",
+            "priority": "normal", **EMPTY_STOPS,
+        })
+        criada = Delivery.objects.get(requester="Ligação telefônica")
+        self.assertRedirects(resposta, reverse("dispatch_detail", args=[criada.pk]))
+        self.assertEqual(criada.company, self.b)
+
+    def test_company_cannot_open_the_platform_pickup_form(self):
+        self.client.force_login(self.admin)
+        self.assertRedirects(self.client.get(reverse("platform_delivery_create")), reverse("dashboard"))
+
+
+class CompanyFleetPrivacyTests(OperationsTestCase):
+    """A empresa vê só o básico do entregador: nome, CPF mascarado, tempo e veículo."""
+
+    def setUp(self):
+        super().setUp()
+        self.fleet_driver.cpf = "321.654.987-91"
+        self.fleet_driver.cnh = "55544433322"
+        self.fleet_driver.rg = "3.998.221"
+        self.fleet_driver.save()
+        self.vehicle.color = "Vermelho"
+        self.vehicle.crlv_expires_at = timezone.localdate() + timedelta(days=90)
+        self.vehicle.insurance_expires_at = timezone.localdate() + timedelta(days=180)
+        self.vehicle.save()
+        self.delivery.driver = self.fleet_driver
+        self.delivery.vehicle = self.vehicle
+        self.delivery.status = Delivery.Status.IN_TRANSIT
+        self.delivery.save()
+
+    def test_masked_cpf_shows_the_contrast_pattern(self):
+        self.assertEqual(self.fleet_driver.masked_cpf, "321.6**.***-**")
+        curto = Driver(cpf="9")
+        self.assertEqual(curto.masked_cpf, "***.***.***-**")
+
+    def test_company_screens_hide_driver_documents(self):
+        self.client.force_login(self.admin)
+        detalhe = self.client.get(reverse("delivery_detail", args=[self.delivery.pk]))
+        self.assertContains(detalhe, "321.6**.***-**")
+        self.assertContains(detalhe, "Honda CG")
+        self.assertContains(detalhe, "AAA1A11")
+        self.assertContains(detalhe, "Vermelho")
+        self.assertNotContains(detalhe, "55544433322")
+        self.assertNotContains(detalhe, "321.654.987-91")
+        self.assertNotContains(detalhe, "3.998.221")
+
+        checklist = PickupChecklist.objects.create(
+            company=self.a, delivery=self.delivery, driver=self.fleet_driver,
+            handover_name="Recepção", handover_document="123", package_count=1,
+            identity_checked=True, item_matches_request=True, packaging_intact=True,
+            seal_applied=True, documents_checked=True, photos_are_original=True,
+            submitted_at=timezone.now(),
+        )
+        termo = self.client.get(reverse("delivery_checklist", args=[self.delivery.pk]))
+        self.assertContains(termo, "321.6**.***-**")
+        self.assertNotContains(termo, "55544433322")
+        self.assertNotContains(termo, f"CNH {self.fleet_driver.cnh}")
+
+        visao = self.client.get(reverse("dashboard"))
+        self.assertContains(visao, "Seus gastos")
+        self.assertNotContains(visao, "motoristas ativos")
+        self.assertEqual(checklist.driver, self.fleet_driver)
 
 
 class MasterAccountTests(OperationsTestCase):
@@ -518,6 +680,7 @@ class MultiStopTests(OperationsTestCase):
 
     def test_request_pdf_carries_the_company_header(self):
         DeliveryStop.objects.create(delivery=self.delivery, order=2, address="Rua B, 2", contact="Ponto 2")
+        Delivery.objects.filter(pk=self.delivery.pk).update(master_confirmed_at=timezone.now())
         self.client.force_login(self.admin)
         response = self.client.get(reverse("company_delivery_document", args=[self.delivery.pk]))
         self.assertEqual(response.status_code, 200)
@@ -544,6 +707,26 @@ class DriverPanelTests(OperationsTestCase):
         self.assertContains(response, self.delivery.code)
         self.assertNotContains(response, self.delivery_b.code)
         self.assertEqual(self.client.get(reverse("driver_job_detail", args=[self.delivery_b.pk])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("driver_job_document", args=[self.delivery_b.pk])).status_code, 404)
+
+    def test_driver_job_hides_product_and_delivery_values(self):
+        from decimal import Decimal
+
+        self.delivery.declared_value = Decimal("1500.00")
+        self.delivery.save(update_fields=["declared_value"])
+        Delivery.objects.filter(pk=self.delivery.pk).update(price=Decimal("88.88"), driver_payout_amount=Decimal("44.44"))
+        self.client.force_login(self.driver_login)
+        page = self.client.get(reverse("driver_job_detail", args=[self.delivery.pk]))
+        self.assertContains(page, reverse("driver_job_document", args=[self.delivery.pk]))
+        self.assertNotContains(page, "Valor declarado")
+        self.assertNotContains(page, "repasse desta corrida")
+        self.assertNotContains(page, "1500")
+        self.assertNotContains(page, "88,88")
+        self.assertNotContains(page, "44,44")
+        response = self.client.get(reverse("driver_job_document", args=[self.delivery.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(b"".join(response.streaming_content).startswith(b"%PDF"))
 
     def test_driver_is_kept_out_of_the_company_panel(self):
         self.client.force_login(self.driver_login)

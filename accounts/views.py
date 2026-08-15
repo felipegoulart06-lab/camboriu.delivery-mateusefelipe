@@ -1,8 +1,10 @@
 from django.contrib import messages
+from django.http import FileResponse
 from django.shortcuts import redirect, render
 
 from core.models import Notification
 from core.uploads import serve as serve_document
+from operations.dossier_pdf import company_dossier_pdf
 from operations.permissions import company_profile_required
 
 from .forms import CompanyProfileForm
@@ -25,9 +27,12 @@ def company_profile(request):
                 body=f"{company.document_label} · {company.full_address or 'endereço não informado'}",
                 url=f"/plataforma/empresas/{company.pk}/",
             )
-            messages.success(request, "Cadastro concluído. Agora você já pode pedir retiradas.")
+            messages.success(
+                request,
+                "Cadastro concluído. Agora você já pode pedir retiradas. O dossiê em PDF já pode ser baixado nas configurações.",
+            )
             return redirect("dashboard")
-        messages.success(request, "Cadastro da empresa atualizado.")
+        messages.success(request, "Cadastro da empresa atualizado. O dossiê em PDF já pode ser baixado.")
         return redirect("company_profile")
     return render(request, "accounts/company_profile.html", {
         "form": form, "company": company, "first_time": first_time,
@@ -38,3 +43,14 @@ def company_profile(request):
 def company_own_document(request, field):
     """Contrato social e comprovantes da própria empresa, sem expor a pasta de mídia."""
     return serve_document(request.user.company, field, Company.DOCUMENTS)
+
+
+@company_profile_required
+def company_own_dossier(request):
+    """Dossiê cadastral da própria empresa, sem notas internas nem lista de acessos."""
+    company = request.user.company
+    return FileResponse(
+        company_dossier_pdf(company, include_internal=False),
+        content_type="application/pdf",
+        filename=f"dossie-empresa-{company.slug}.pdf",
+    )

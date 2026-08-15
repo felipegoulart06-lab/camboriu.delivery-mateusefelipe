@@ -2,8 +2,13 @@
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div><p class="eyebrow">CADASTRO DE EMPRESA</p><h1>{{ title }}</h1><p>Preencha o que você já tem em mãos. Os anexos podem ser enviados depois pela própria empresa, na tela de configurações dela.</p></div>
-  <a class="button secondary" href="{% if company %}{% url 'company_detail' company.pk %}{% else %}{% url 'company_list' %}{% endif %}">Cancelar</a>
+  <div>
+    <p class="eyebrow">CADASTRO DE EMPRESA</p><h1>{{ title }}</h1><p>Preencha o que você já tem em mãos. Os anexos podem ser enviados depois pela própria empresa, na tela de configurações dela.</p>
+  </div>
+  <div class="head-actions">
+    {% if company %}<a class="button" href="{% url 'company_dossier' company.pk %}">Baixar dossiê</a>{% endif %}
+    <a class="button secondary" href="{% if company %}{% url 'company_detail' company.pk %}{% else %}{% url 'company_list' %}{% endif %}">Cancelar</a>
+  </div>
 </div>
 {% if company and company.missing_documents %}
   <div class="message warn">Documentos pendentes: {{ company.missing_documents|join:", " }}.</div>

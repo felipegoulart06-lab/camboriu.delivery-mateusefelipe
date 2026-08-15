@@ -34,7 +34,7 @@
         <td>{{ item.delivered_at|date:"d/m/Y H:i"|default:"—" }}</td>
         <td>{{ item.destination_count }}</td>
         <td>R$ {{ item.price }}</td>
-        <td><a href="{% url 'company_delivery_document' item.pk %}">PDF</a></td>
+        <td>{% if item.is_master_confirmed %}<a href="{% url 'company_delivery_document' item.pk %}">PDF</a>{% else %}—{% endif %}</td>
       </tr>
     {% empty %}<tr><td colspan="5" class="empty">Nenhuma entrega concluída aguardando faturamento.</td></tr>{% endfor %}
     </tbody>

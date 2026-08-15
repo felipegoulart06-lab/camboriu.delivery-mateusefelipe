@@ -118,7 +118,9 @@ def delivery_document(request, pk):
     delivery = get_object_or_404(
         tenant_queryset(request, Delivery).select_related("company", "driver", "vehicle"), pk=pk,
     )
+    if not delivery.is_master_confirmed:
+        raise Http404("O PDF fica disponível depois que a central confirmar entregador e veículo.")
     return FileResponse(
-        delivery_request_pdf(delivery), content_type="application/pdf",
+        delivery_request_pdf(delivery, public_fleet=True), content_type="application/pdf",
         filename=f"solicitacao-{delivery.code}.pdf",
     )

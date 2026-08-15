@@ -6,7 +6,10 @@
     <p class="eyebrow">CADASTRO DE ENTREGADOR</p><h1>{{ title }}</h1>
     <p>Ficha completa do entregador, com habilitação e documentos. O e-mail e a senha aqui são o login que ele usa no celular.{% if driver %} Deixe a senha em branco para mantê-la.{% endif %}</p>
   </div>
-  <a class="button secondary" href="{% url 'platform_drivers' %}">Cancelar</a>
+  <div class="head-actions">
+    {% if driver %}<a class="button" href="{% url 'platform_driver_dossier' driver.pk %}">Baixar dossiê</a>{% endif %}
+    <a class="button secondary" href="{% url 'platform_drivers' %}">Cancelar</a>
+  </div>
 </div>
 {% if driver and driver.missing_documents %}
   <div class="message warn">Documentos pendentes: {{ driver.missing_documents|join:", " }}.</div>

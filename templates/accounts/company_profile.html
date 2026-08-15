@@ -13,7 +13,12 @@
       {% endif %}
     </p>
   </div>
-  {% if not first_time %}<a class="button secondary" href="{% url 'dashboard' %}">Voltar ao painel</a>{% endif %}
+  {% if not first_time %}
+  <div class="head-actions">
+    <a class="button" href="{% url 'company_own_dossier' %}">Baixar dossiê</a>
+    <a class="button secondary" href="{% url 'dashboard' %}">Voltar ao painel</a>
+  </div>
+  {% endif %}
 </div>
 
 {% if first_time %}

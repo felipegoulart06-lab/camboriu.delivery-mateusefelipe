@@ -5,6 +5,7 @@
   <div><p class="eyebrow">CAMBORIÚ DELIVERY · ADMINISTRAÇÃO</p><h1>Olá, {{ user.first_name|default:user.username }}.</h1><p>Situação da operação e das empresas atendidas hoje.</p></div>
   <div class="head-actions">
     {% if user.can_manage_companies %}<a class="button" href="{% url 'company_create' %}">+ Cadastrar empresa</a>{% endif %}
+    <a class="button" href="{% url 'platform_delivery_create' %}">+ Nova retirada</a>
     <a class="button secondary" href="{% url 'finance_dashboard' %}">Financeiro</a>
     <a class="button secondary" href="{% url 'dispatch_board' %}">Ir para o despacho</a>
   </div>
