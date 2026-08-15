@@ -13,13 +13,9 @@
 <body class="login-page">
 <main class="login-card">
   <a class="logo dark" href="{% url 'landing' %}">{% include "partials/brand.html" %}</a>
-  <p class="eyebrow">ACESSO AO ERP</p>
   {% if selected_profile %}
   <h1>Entrar como {{ selected_profile.label }}.</h1>
   <p>{{ selected_profile.hint }}.</p>
-  {% else %}
-  <h1>Bem-vindo de volta.</h1>
-  <p>Entre com o login do painel que você quer usar. Cada perfil abre a área certa.</p>
   {% endif %}
 
   {% if locked_out %}<div class="message error">Muitas tentativas de acesso. Aguarde {{ lock_minutes }} minutos e tente de novo, ou fale com a central para redefinir a senha.</div>{% endif %}
@@ -34,10 +30,6 @@
     <button class="button" type="submit">Entrar no painel</button>
   </form>
 
-  <div class="login-hints">
-    <p><strong>Importante:</strong> no mesmo navegador só fica uma conta. Para ver os 3 painéis ao mesmo tempo, use 3 janelas anônimas.</p>
-  </div>
-
   {% if profiles %}
   <div class="profile-switch">
     {% for key, item in profiles.items %}
@@ -48,10 +40,6 @@
   <div class="login-hints">
     {% for key, item in profiles.items %}<p><strong>{{ item.label }}</strong> · {{ item.username }}</p>{% endfor %}
     <p>Ambiente de demonstração. Em produção esta lista não aparece.</p>
-  </div>
-  {% else %}
-  <div class="login-hints">
-    <p>Esqueceu a senha? Fale com a central da SC Transporte Executivo para receber um novo acesso.</p>
   </div>
   {% endif %}
 </main>
