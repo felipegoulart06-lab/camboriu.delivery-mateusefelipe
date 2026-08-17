@@ -75,22 +75,28 @@
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
 .page-head,.head-actions{flex-wrap:wrap}
 @media print{.sidebar,.no-print,.mobile-head,.messages,.menu-toggle,.backdrop{display:none!important}.shell{display:block}.content{padding:0}.card{box-shadow:none;border:0}.photo-grid img{height:auto}}
-@media(max-width:900px){
+@media(max-width:1200px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .split{grid-template-columns:1fr}
+}
+@media(max-width:1023px){
   html,body{overflow-x:clip}
   .shell{display:block}
-  .mobile-head{position:sticky;top:0;z-index:8;display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--deep);color:#fff}
+  .mobile-head{position:sticky;top:0;z-index:8;display:flex;align-items:center;gap:12px;padding:12px max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left));background:var(--deep);color:#fff}
   .mobile-head .logo{flex:1;min-width:0}
+  .mobile-head .wordmark{gap:5px}
   .menu-toggle{display:grid}
-  .sidebar{position:fixed;top:0;left:0;z-index:20;width:min(280px,86vw);height:100dvh;transform:translateX(-105%);transition:transform .22s ease;overflow:auto}
+  .sidebar{position:fixed;top:0;left:0;z-index:20;width:min(280px,86vw);height:100dvh;transform:translateX(-105%);transition:transform .22s ease;overflow:auto;padding-bottom:max(24px,env(safe-area-inset-bottom))}
   .backdrop{display:block;position:fixed;inset:0;z-index:15;background:rgba(20,20,20,.45);opacity:0;pointer-events:none;transition:opacity .22s ease}
   body.nav-open{overflow:hidden}
   body.nav-open .sidebar{transform:none;box-shadow:18px 0 40px rgba(20,20,20,.28)}
   body.nav-open .backdrop{opacity:1;pointer-events:auto}
-  .content{padding:20px 16px 32px;min-width:0}
+  .content{padding:20px 16px max(32px,env(safe-area-inset-bottom));min-width:0}
   .kpis{grid-template-columns:1fr 1fr}
   .split,.detail-grid,.tracking-grid{grid-template-columns:1fr}
   .page-head{align-items:start;flex-direction:column}
   .table-wrap{margin:0 -8px;padding:0 8px}
+  input,select,textarea{font-size:16px}
 }
 @media(max-width:650px){
   .kpis,.form-grid,.photo-grid{grid-template-columns:1fr}
@@ -99,5 +105,6 @@
   .login-card{padding:28px 20px}
   .login-page{padding:16px}
   .hero-actions .button,.head-actions .button{width:100%}
+  .logo .name{letter-spacing:.08em}
 }
 .logo .tagline{font:800 .6rem/1 Syne,sans-serif;letter-spacing:.14em;text-transform:uppercase;background:linear-gradient(90deg,#1b8a4a,#c62828);-webkit-background-clip:text;background-clip:text;color:transparent}

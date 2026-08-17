@@ -241,7 +241,7 @@ footer .brand .name { color: #fff }
 @media (max-width: 1020px) {
   .grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)) }
 }
-@media (max-width: 899px) {
+@media (max-width: 1023px) {
   .top { z-index: 40 }
   .menu-toggle { display: grid; position: relative; z-index: 31 }
   .top nav {
@@ -252,7 +252,7 @@ footer .brand .name { color: #fff }
     width: min(300px, 86vw);
     height: 100dvh;
     margin: 0;
-    padding: 88px 22px 28px;
+    padding: 88px 22px max(28px, env(safe-area-inset-bottom));
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
@@ -275,15 +275,17 @@ footer .brand .name { color: #fff }
   body.nav-open { overflow: hidden }
   body.nav-open .top nav { transform: none }
   body.nav-open .backdrop { opacity: 1; pointer-events: auto }
-  .hero { min-height: min(640px, 100dvh) }
+  .hero { min-height: min(560px, 88dvh) }
   .strip, .grid.three { grid-template-columns: 1fr }
   .cta, footer { flex-direction: column; align-items: flex-start }
   footer small { margin-left: 0 }
 }
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .grid.four { grid-template-columns: 1fr }
   .hero-actions .btn { width: 100% }
   .cta .btn { width: 100% }
-  .brand .name { font-size: .58rem; letter-spacing: .1em }
-  .brand .tagline { font-size: .56rem; letter-spacing: .12em }
+  .brand .wordmark { gap: 6px }
+  .brand .name { font-size: .58rem; letter-spacing: .08em }
+  .brand .tagline { font-size: .56rem; letter-spacing: .1em }
+  input, select, textarea { font-size: 16px }
 }

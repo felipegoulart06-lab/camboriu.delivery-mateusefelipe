@@ -319,6 +319,18 @@ class VercelDeployTests(TestCase):
         self.assertIn("https://*.vercel.app", origens)
         self.assertIn(".vercel.app", merge_unique(["localhost"], hosts))
 
+    def test_vercel_json_sends_pages_to_the_django_function(self):
+        import json
+        from pathlib import Path
+
+        from django.conf import settings
+
+        data = json.loads((Path(settings.BASE_DIR) / "vercel.json").read_text(encoding="utf-8"))
+        rewrites = data.get("rewrites") or []
+        self.assertTrue(rewrites)
+        self.assertTrue(any(item.get("destination") == "/api" for item in rewrites))
+        self.assertIn("config/wsgi.py", data.get("functions") or {})
+
     def test_serverless_switches_supabase_pooler_to_transaction_mode(self):
         from core.deploy import serverless_database
 

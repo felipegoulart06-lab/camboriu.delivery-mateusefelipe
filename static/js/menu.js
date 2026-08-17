@@ -19,6 +19,6 @@
     if (event.key === "Escape") setOpen(false);
   });
   window.addEventListener("resize", () => {
-    if (window.matchMedia("(min-width: 900px)").matches) setOpen(false);
+    if (window.matchMedia("(min-width: 1024px)").matches) setOpen(false);
   });
 })();

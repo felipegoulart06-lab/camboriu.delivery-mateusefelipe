@@ -94,18 +94,20 @@ dl.data dd{margin:0;font-weight:600;font-size:.88rem;text-align:right}
 .menu-toggle{display:grid;gap:5px;width:42px;height:42px;padding:11px 9px;border:0;border-radius:10px;background:#ffffff14;cursor:pointer}
 .menu-toggle span{display:block;height:2px;border-radius:2px;background:#fff}
 @media(min-width:560px){.photo-slots{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:repeat(4,1fr)}.stat-grid.two{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:899px){
+@media(max-width:1023px){
   .shell{display:block}
-  .mobile-head{position:sticky;top:0;z-index:8;display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--deep);color:#fff}
+  .mobile-head{position:sticky;top:0;z-index:8;display:flex;align-items:center;gap:12px;padding:12px max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left));background:var(--deep);color:#fff}
   .mobile-head .logo{flex:1;min-width:0}
+  .mobile-head .wordmark{gap:5px}
   .mobile-head .state{padding:3px 8px;border-radius:99px;background:#ffffff22;color:#d4d4d4;font-size:.7rem;font-weight:600;white-space:nowrap}
   .mobile-head .state.on{background:#4a4a4a;color:#ffffff}
-  .sidebar{position:fixed;top:0;left:0;z-index:20;width:min(280px,86vw);height:100dvh;transform:translateX(-105%);transition:transform .22s ease;box-shadow:none}
+  .sidebar{position:fixed;top:0;left:0;z-index:20;width:min(280px,86vw);height:100dvh;transform:translateX(-105%);transition:transform .22s ease;box-shadow:none;padding-bottom:max(24px,env(safe-area-inset-bottom))}
   .backdrop{display:block;position:fixed;inset:0;z-index:15;background:rgba(20,20,20,.45);opacity:0;pointer-events:none;transition:opacity .22s ease}
   body.nav-open{overflow:hidden}
   body.nav-open .sidebar{transform:none;box-shadow:18px 0 40px rgba(20,20,20,.28)}
   body.nav-open .backdrop{opacity:1;pointer-events:auto}
-  .content{padding:18px 16px 32px}
+  .content{padding:18px 16px max(32px,env(safe-area-inset-bottom))}
+  input,select,textarea{font-size:16px}
 }
 @media(max-width:560px){.stat-grid,.stat-grid.two{grid-template-columns:1fr 1fr}}
 .logo .tagline{font:800 .6rem/1 Syne,sans-serif;letter-spacing:.14em;text-transform:uppercase;background:linear-gradient(90deg,#1b8a4a,#c62828);-webkit-background-clip:text;background-clip:text;color:transparent}
