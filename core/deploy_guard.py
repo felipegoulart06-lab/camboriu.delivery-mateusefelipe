@@ -10,7 +10,7 @@ def pagina_de_deploy(falhas):
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Configuração pendente · SC Transporte Executivo</title>
+  <title>Configuração pendente · SC Transporte Executivo Delivery</title>
   <style>
     body {{ font-family: sans-serif; max-width: 40rem; margin: 12vh auto; padding: 0 1.5rem; line-height: 1.5; color: #102017; }}
     code {{ background: #eef3ef; padding: .1rem .35rem; border-radius: 4px; }}

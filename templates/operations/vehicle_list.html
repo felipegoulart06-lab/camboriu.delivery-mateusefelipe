@@ -5,7 +5,7 @@
   <div>
     <p class="eyebrow">FROTA</p>
     <h1>Veículos</h1>
-    <p>{% if read_only_fleet %}Veículos da SC Transporte Executivo disponíveis para suas entregas.{% else %}Disponibilidade e capacidade operacional.{% endif %}</p>
+    <p>{% if read_only_fleet %}Veículos da SC Transporte Executivo Delivery disponíveis para suas entregas.{% else %}Disponibilidade e capacidade operacional.{% endif %}</p>
   </div>
   {% if user.can_manage_resources and not read_only_fleet %}<a class="button" href="{% url 'vehicle_create' %}">+ Novo veículo</a>{% endif %}
 </div>

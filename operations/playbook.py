@@ -6,7 +6,7 @@ entregador receberem a mesma regra — sem versão resumida.
 
 TITLE = "Manual de integração — entregas de alto padrão"
 SUBTITLE = (
-    "Como a SC Transporte Executivo executa coleta, transporte e entrega de itens "
+    "Como a SC Transporte Executivo Delivery executa coleta, transporte e entrega de itens "
     "sensíveis, com cadeia de custódia, rastreio e prova fotográfica."
 )
 VERSION = "1.0"
@@ -20,7 +20,7 @@ SECTIONS = (
             {
                 "type": "p",
                 "text": (
-                    "Este manual descreve, passo a passo, o jeito único de trabalhar da SC Transporte Executivo. "
+                    "Este manual descreve, passo a passo, o jeito único de trabalhar da SC Transporte Executivo Delivery. "
                     "Não é um resumo comercial: é o procedimento que a empresa, o entregador e a central "
                     "devem seguir em toda corrida. Imprima ou envie o PDF antes da primeira operação."
                 ),
@@ -496,7 +496,7 @@ SECTIONS = (
             {
                 "type": "p",
                 "text": (
-                    "Documento interno da SC Transporte Executivo. Descreve o procedimento vigente do sistema. "
+                    "Documento interno da SC Transporte Executivo Delivery. Descreve o procedimento vigente do sistema. "
                     "Alteração de regra só vale quando o painel for atualizado — não por combinado verbal."
                 ),
             },

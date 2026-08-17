@@ -27,7 +27,7 @@
     <p class="slip-line">{{ invoice.bank_slip_line }}</p>
     {% if invoice.bank_slip_url %}<p><a class="button secondary" href="{{ invoice.bank_slip_url }}" target="_blank" rel="noopener">Abrir boleto no banco</a></p>{% endif %}
   {% elif invoice.kind == 'boleto' %}
-    <p>Boleto em emissão pela SC Transporte Executivo. Assim que sair, a linha digitável aparece aqui e no PDF.</p>
+    <p>Boleto em emissão pela SC Transporte Executivo Delivery. Assim que sair, a linha digitável aparece aqui e no PDF.</p>
   {% else %}
     <p>Cobrança por Pix ou dinheiro. Combine o pagamento com a central.</p>
   {% endif %}

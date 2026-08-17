@@ -201,7 +201,7 @@ class TelasDaOperacaoTests(TestCase):
         painel = self.client.get(reverse("dashboard"))
         self.assertEqual(painel.context["total"], 3)
         self.assertEqual(painel.context["delivered"], 1)
-        self.assertEqual(painel.context["fleet_label"], "frota SC Transporte Executivo")
+        self.assertEqual(painel.context["fleet_label"], "frota SC Transporte Executivo Delivery")
         self.assertNotContains(painel, self.da_beta.code)
 
     def test_lista_de_entregas_da_empresa_filtra_por_status(self):
@@ -273,5 +273,6 @@ class TelasDaOperacaoTests(TestCase):
         self.client.logout()
         inicio = self.client.get(reverse("landing"))
         self.assertContains(inicio, "transporte executivo")
+        self.assertContains(inicio, "Delivery")
         self.assertContains(inicio, "cargas sensíveis")
         self.assertContains(inicio, reverse("login"))

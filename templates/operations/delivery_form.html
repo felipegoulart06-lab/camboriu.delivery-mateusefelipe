@@ -2,7 +2,7 @@
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div><p class="eyebrow">SOLICITAÇÃO DE RETIRADA</p><h1>{{ title }}</h1><p>Uma viagem pode ter vários destinos. A central da SC Transporte Executivo recebe o pedido com o cadastro da sua empresa.</p></div>
+  <div><p class="eyebrow">SOLICITAÇÃO DE RETIRADA</p><h1>{{ title }}</h1><p>Uma viagem pode ter vários destinos. A central da SC Transporte Executivo Delivery recebe o pedido com o cadastro da sua empresa.</p></div>
   <a class="button secondary" href="{% if cancel_pk %}{% url cancel_url cancel_pk %}{% else %}{% url cancel_url %}{% endif %}">Cancelar</a>
 </div>
 

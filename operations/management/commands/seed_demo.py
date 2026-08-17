@@ -32,7 +32,7 @@ class Command(BaseCommand):
         platform, _ = Company.objects.update_or_create(
             slug="camboriu-delivery",
             defaults={
-                "name": "SC Transporte Executivo", "legal_name": "SC Transporte Executivo LTDA",
+                "name": "SC Transporte Executivo Delivery", "legal_name": "SC Transporte Executivo Delivery LTDA",
                 "document_type": Company.DocumentType.CNPJ, "document": "11.222.333/0001-81",
                 "state_registration": "255.123.456", "tax_regime": Company.TaxRegime.SIMPLES,
                 "business_area": "Transporte rodoviário de cargas", "founded_on": date(2019, 3, 12),
@@ -72,7 +72,7 @@ class Command(BaseCommand):
         self._user(pending, "brisa@demo.local", password, User.Role.OWNER, "Brisa", "Ateliê")
         PricingPolicy.current()
 
-        self._user(platform, options["master_email"], password, User.Role.MASTER, "Master", "SC Transporte Executivo")
+        self._user(platform, options["master_email"], password, User.Role.MASTER, "Master", "SC Transporte Executivo Delivery")
         admin = self._user(client, options["admin_email"], password, User.Role.ADMIN, "Ana", "Operações")
         self._user(client, options["viewer_email"], password, User.Role.VIEWER, "Vitor", "Consulta")
         self._user(platform, options["dispatcher_email"], password, User.Role.DISPATCHER, "Central", "Despacho")
@@ -124,7 +124,7 @@ class Command(BaseCommand):
                 "year": 2025, "model_year": 2025, "color": "Vermelha", "fuel": Vehicle.Fuel.FLEX,
                 "mileage_km": 18400, "capacity_kg": Decimal("25"), "equipment": "Baú térmico 90L",
                 "top_case_liters": 90, "lockable": True,
-                "owner_name": "SC Transporte Executivo LTDA", "owner_document": "11.222.333/0001-81",
+                "owner_name": "SC Transporte Executivo Delivery LTDA", "owner_document": "11.222.333/0001-81",
                 "crlv_expires_at": today + timedelta(days=180),
                 "has_tracker": True, "tracker_provider": "Sascar",
             },
@@ -138,7 +138,7 @@ class Command(BaseCommand):
                 "mileage_km": 42300, "capacity_kg": Decimal("500"), "equipment": "Compartimento lacrado",
                 "doors": 3, "cargo_length_cm": 170, "cargo_width_cm": 140, "cargo_height_cm": 120,
                 "lockable": True,
-                "owner_name": "SC Transporte Executivo LTDA", "owner_document": "11.222.333/0001-81",
+                "owner_name": "SC Transporte Executivo Delivery LTDA", "owner_document": "11.222.333/0001-81",
                 "crlv_expires_at": today + timedelta(days=210),
                 "insurer": "Porto Seguro", "insurance_policy": "AP-778931",
                 "insurance_expires_at": today + timedelta(days=150),

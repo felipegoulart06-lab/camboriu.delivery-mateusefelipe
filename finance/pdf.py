@@ -41,7 +41,7 @@ def texto(valor):
 
 def _document(buffer, title):
     return SimpleDocTemplate(
-        buffer, pagesize=A4, title=title, author="SC Transporte Executivo",
+        buffer, pagesize=A4, title=title, author="SC Transporte Executivo Delivery",
         leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=16 * mm,
     )
 
@@ -184,7 +184,7 @@ def delivery_request_pdf(delivery, hide_values=False, public_fleet=False):
     story.append(_facts(execucao))
     story.append(Spacer(1, 10))
     story.append(Paragraph(
-        "Documento gerado pelo sistema SC Transporte Executivo. Os dados cadastrais acima foram informados pela própria "
+        "Documento gerado pelo sistema SC Transporte Executivo Delivery. Os dados cadastrais acima foram informados pela própria "
         "empresa solicitante e acompanham esta solicitação para fins de contrato de prestação de serviço.",
         STYLES["muted"],
     ))
@@ -237,7 +237,7 @@ def invoice_pdf(invoice):
         ]))
     elif invoice.kind == invoice.Kind.BANK_SLIP:
         story.append(Paragraph(
-            "Boleto em emissão pela SC Transporte Executivo. A linha digitável aparece aqui e no painel assim que o banco emitir.",
+            "Boleto em emissão pela SC Transporte Executivo Delivery. A linha digitável aparece aqui e no painel assim que o banco emitir.",
             STYLES["muted"],
         ))
     if invoice.notes:

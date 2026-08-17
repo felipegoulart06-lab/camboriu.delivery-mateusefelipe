@@ -5,7 +5,7 @@ a{color:var(--teal);text-decoration:none}
 button,input,select,textarea{font:inherit}
 .shell{min-height:100vh;display:grid;grid-template-columns:250px 1fr}
 .sidebar{position:sticky;top:0;height:100vh;padding:30px 22px;background:var(--deep);color:#fff;display:flex;flex-direction:column}
-.logo{display:flex;flex-direction:row;align-items:center;gap:8px;color:#fff;min-width:0}.logo .mark{font:800 1.2rem/1 Syne,sans-serif;letter-spacing:.02em;flex:0 0 auto}.logo .mark b{color:#c62828;font-style:normal}.logo .mark i{color:#1b8a4a;font-style:normal}.logo .name{font-weight:600;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:#fff;white-space:nowrap;padding-left:8px;border-left:1px solid #ffffff38;line-height:1}
+.logo{display:flex;flex-direction:row;align-items:center;gap:8px;color:#fff;min-width:0}.logo .mark{font:800 1.2rem/1 Syne,sans-serif;letter-spacing:.02em;flex:0 0 auto}.logo .mark b{color:#c62828;font-style:normal}.logo .mark i{color:#1b8a4a;font-style:normal}.logo .wordmark{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:6px;min-width:0;padding-left:8px;border-left:1px solid #ffffff38}.logo .name{font-weight:600;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:#fff;white-space:nowrap;line-height:1}
 .sidebar .scope{margin:14px 0 0;padding:5px 10px;border-radius:99px;background:#ffffff14;color:#c8c8c8;font-size:.72rem;font-weight:600;letter-spacing:.04em;width:fit-content}
 .sidebar .state{margin:10px 0 0;padding:4px 10px;border-radius:99px;background:#ffffff22;color:#d4d4d4;font-size:.72rem;font-weight:600;width:fit-content}
 .sidebar .state.on{background:#4a4a4a;color:#ffffff}
@@ -108,3 +108,6 @@ dl.data dd{margin:0;font-weight:600;font-size:.88rem;text-align:right}
   .content{padding:18px 16px 32px}
 }
 @media(max-width:560px){.stat-grid,.stat-grid.two{grid-template-columns:1fr 1fr}}
+.logo .tagline{font:800 .6rem/1 Syne,sans-serif;letter-spacing:.14em;text-transform:uppercase;background:linear-gradient(90deg,#c62828,#fff 35%,#1b8a4a 65%,#c62828);background-size:240% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:delivery-shine 4.8s linear infinite}
+@keyframes delivery-shine{to{background-position:-240% 0}}
+@media(prefers-reduced-motion:reduce){.logo .tagline{animation:none}}

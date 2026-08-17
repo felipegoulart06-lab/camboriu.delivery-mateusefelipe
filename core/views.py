@@ -59,11 +59,11 @@ def dashboard(request):
         vehicles = Vehicle.objects.filter(company=company)
         fleet_label = "na operação"
     else:
-        # Empresa cliente: pedidos dela, frota da SC Transporte Executivo.
+        # Empresa cliente: pedidos dela, frota da SC Transporte Executivo Delivery.
         deliveries = Delivery.objects.filter(company=company)
         drivers = Driver.objects.filter(company__is_platform=True)
         vehicles = Vehicle.objects.filter(company__is_platform=True)
-        fleet_label = "frota SC Transporte Executivo"
+        fleet_label = "frota SC Transporte Executivo Delivery"
 
     by_status = dict(deliveries.values_list("status").annotate(total=Count("id")))
     month_start = timezone.localdate().replace(day=1)

@@ -42,7 +42,7 @@
   function desktop(item) {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
     try {
-      new Notification(item.title || "SC Transporte Executivo", {
+      new Notification(item.title || "SC Transporte Executivo Delivery", {
         body: "Há uma atualização no painel.",
         tag: `aviso-${item.id}`,
         silent: true,
