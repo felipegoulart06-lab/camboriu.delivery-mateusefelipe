@@ -108,6 +108,4 @@ dl.data dd{margin:0;font-weight:600;font-size:.88rem;text-align:right}
   .content{padding:18px 16px 32px}
 }
 @media(max-width:560px){.stat-grid,.stat-grid.two{grid-template-columns:1fr 1fr}}
-.logo .tagline{font:800 .6rem/1 Syne,sans-serif;letter-spacing:.14em;text-transform:uppercase;background:linear-gradient(90deg,#c62828,#fff 35%,#1b8a4a 65%,#c62828);background-size:240% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:delivery-shine 4.8s linear infinite}
-@keyframes delivery-shine{to{background-position:-240% 0}}
-@media(prefers-reduced-motion:reduce){.logo .tagline{animation:none}}
+.logo .tagline{font:800 .6rem/1 Syne,sans-serif;letter-spacing:.14em;text-transform:uppercase;background:linear-gradient(90deg,#1b8a4a,#c62828);-webkit-background-clip:text;background-clip:text;color:transparent}

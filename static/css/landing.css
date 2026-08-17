@@ -65,18 +65,10 @@ a { text-decoration: none; color: inherit }
   font: 800 .68rem/1 Syne, sans-serif;
   letter-spacing: .16em;
   text-transform: uppercase;
-  background: linear-gradient(90deg, #c62828, #fff 35%, #1b8a4a 65%, #c62828);
-  background-size: 240% 100%;
+  background: linear-gradient(90deg, #1b8a4a, #c62828);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: delivery-shine 4.8s linear infinite;
-}
-@keyframes delivery-shine {
-  to { background-position: -240% 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .brand .tagline, .logo .tagline { animation: none; }
 }
 .top nav {
   margin-left: auto;
