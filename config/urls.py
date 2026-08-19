@@ -18,7 +18,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
+from django.contrib.staticfiles.storage import staticfiles_storage
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 from accounts import views as accounts_views
 from core import views as core_views
@@ -26,6 +28,7 @@ from core.auth_views import PanelLoginView, switch_account
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("favicon.ico", RedirectView.as_view(url=staticfiles_storage.url("img/favicon.svg"), permanent=True)),
     path("", core_views.landing, name="landing"),
     path("avisos/ao-vivo/", core_views.live_alerts, name="live_alerts"),
     path("app/", core_views.dashboard, name="dashboard"),
